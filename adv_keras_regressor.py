@@ -1,6 +1,8 @@
 from sklearn.base import BaseEstimator, RegressorMixin
 from sklearn.utils.validation import check_X_y, check_array, check_is_fitted, validate_data
+from scipy.sparse import issparse
 from sklearn.metrics import r2_score
+import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers as kl
 import numpy as np
@@ -12,6 +14,46 @@ def shapes_equal(a, b):
         (x == y) or (x is None) or (y is None)
         for x, y in zip(a, b)
     )
+
+class SKlearnLayer(keras.layers.Layer):
+    '''
+    Provides support for sklearn models to act as layers in
+    a neural network
+    '''
+    def __init__(self, model):
+        '''
+        Attributes
+        - model (scikit-learn regressor): A fully traiend sklearn model
+                                          (ex. GradientBoostingRegressor)
+        '''
+        super().__init__()
+        self.model = model
+    
+    def call(self, inputs):
+        '''
+        This method decides how an input is passed through the layer
+
+        :param inputs (KerasTensor): The input tensor
+        
+        :return (KerasTensor): The tensor after the sklearn model is applied
+        '''
+        def regressor_pred(x):
+            pred = self.model.predict(x)
+            pred = np.asarray(pred, dtype=np.float32)
+
+            if pred.ndim == 1:
+                pred = pred.reshape(-1,1)
+
+            return pred
+
+        y = tf.numpy_function(
+            regressor_pred,
+            [inputs],
+            tf.float32
+        )
+
+        y.set_shape((None,1))
+        return y
 
 class AdvKerasRegressor(RegressorMixin,BaseEstimator):
     '''
@@ -366,6 +408,25 @@ class AdvKerasRegressor(RegressorMixin,BaseEstimator):
         out = kl.Add()([pre_x,out])
         return kl.Activation(final_activation)(out)
 
+    def _add_regressor_block(self,model,ind,x):
+        '''
+        Adds a layer to the model that is the output of a trained sklearn model
+
+        :param model (scikit-learn regressor): A fully trained scikit-learn regressor
+                                               (ex. GradientBoostingRegressor)
+        :param ind (int or str): The index of this layer
+        :param x (KerasTensor): The tensor being passed through the model
+
+        :return (KerasTensor): The tensor after being passed through the regressor
+        '''
+        if len(x.shape) != 2:
+            raise ValueError("Expected input of model layer to have shape (n_samples, n_features)")
+
+        try:
+            return SKlearnLayer(model)(x)
+        except Exception as e:
+            print(f"Exception found in regressor layer {ind}: {e}")
+
     def _add_block(self,struct,ind,x):
         '''
         Adds a block to the model with the given parameters
@@ -393,6 +454,10 @@ class AdvKerasRegressor(RegressorMixin,BaseEstimator):
 
             return self._add_xception_block(block_specs,ind,layer_specs.get('final_activation','linear'),x,
                                             layer_specs.get('allow_projection',True))
+        elif layer_type.lower() == 'regressor':
+            model = layer_specs.get('model')
+            
+            return self._add_regressor_block(model,ind,x)
         else:
             return self._add_simple_block(layer_type,layer_specs,ind,x)
 
