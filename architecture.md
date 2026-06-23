@@ -20,6 +20,7 @@ More advanced types:
 - 'R' or 'resnet', 'residual'
 - 'I' or 'incep', 'inception'
 - 'X' or 'xcep', 'xception'
+- 'regressor'
 
 ## For simple layers:
 Then, this dictionary can either have a 'specs' key, or the hyperparameters can be put directly as keys. If a 'specs' key is used, the associated value should be a dictionary containing the hyperparameters as keys
@@ -57,7 +58,7 @@ The names of the keys are the names of the hyperparameters used by Keras (req is
     - 'layer' (keras.layers.Layer or callable taking KerasTensor as input)
     - You can use this to make custom blocks as well, if you'd like
 
-## For blocks (advanced):
+## For advanced blocks and layers:
 - For 'R'
     - This is a ResNet block. If you do not know what this is you can read more on it on https://en.wikipedia.org/wiki/Residual_neural_network
     - For your dictionary, you must either have it to be of the form:
@@ -142,6 +143,22 @@ The names of the keys are the names of the hyperparameters used by Keras (req is
         - 'activation' (req | str or callable): denotes the activation function for the layer
     - 'final_activation' (opt | str or callable | default='linear'): This is the activation function applied on x + F(x)
     - 'allow_projection' (opt | bool | default=True): If set to True, in the case F(x) and x are of different shapes, this will handle it by projecting x onto the shape F(x). If set to False, an error will be raised if x and F(x) are of different shapes
+- For 'regressor'
+    - This creates a layer that acts like an sklearn regressor. The input of this layer should be the input of the regressor, and the output will be the output of the regressor
+    - It should be of the form:
+    ```python
+    {'type':'regressor',
+     'specs':{'model':...}}
+    ```
+    OR
+    ```python
+    {'type':'regressor',
+     'model':...}
+    ```
+    - 'model' (scikit-learn regressor): This is a fully trained sklearn regressor (ex. GradientBoostingRegressor)
+    - * Note that as most sklearn models do not use gradients, backpropagation will STOP at this layer. As a result, all previous layers will NOT be trained. As a result, it is advised to put this near the front of the model
+    - * As a further note, if this layer is put in parallel with a standard Keras layer (ex. Dense) in an inception block, then the standard Keras layer and all other standard layers before it will still be trained. Issues only arise when the sklearn layer is in series with the other layers
+    - This is primarily used for combining the outputs of different models
 * Note: model_structure is recursive. This means you can nest ResNet blocks, Inception blocks, and Xception blocks easily
 
 
