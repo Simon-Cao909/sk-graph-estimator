@@ -6,7 +6,7 @@ from tensorflow import keras
 from tensorflow.keras import layers as kl
 import numpy as np
 
-from sklearn_layer import SKlearnLayer
+from .sklearn_layer import SKlearnLayer
 
 def shapes_equal(a, b):
     '''
@@ -29,8 +29,6 @@ class AdvKerasRegressor(RegressorMixin,BaseEstimator):
     '''
     AdvKerasRegressor is a machine learning algorithm that combines the user-friendly 
     features of MLPRegressor and the versatility of Tensorflow with Keras
-
-    It is an upgraded version of KerasRegressor, now supporting more types of networks
     '''
     
     def __init__(
@@ -539,15 +537,14 @@ class AdvKerasRegressor(RegressorMixin,BaseEstimator):
         self.model_ = self.build_model()
 
         if len(self.output_shape_) <= 2:
-            X, y = check_X_y(
+            X, y = validate_data(
+                self,
                 X,
                 y,
-                accept_sparse=False,
                 multi_output=True,
                 y_numeric=True,
                 dtype=np.float32,
             )
-            X,y = validate_data(self,X,y)
 
         # If y is of shape (n_samples,), we need it to be of shape (n_samples,1)
         self.y_was_1d_ = y.ndim == 1
