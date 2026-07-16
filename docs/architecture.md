@@ -21,10 +21,20 @@ More advanced types:
 - 'I' or 'incep', 'inception'
 - 'X' or 'xcep', 'xception'
 - 'regressor'
+- 'NN' or 'neural'
 
 ## For simple layers:
-Then, this dictionary can either have a 'specs' key, or the hyperparameters can be put directly as keys. If a 'specs' key is used, the associated value should be a dictionary containing the hyperparameters as keys
-The names of the keys are the names of the hyperparameters used by Keras (req is for required, opt for optional). The associated value type is given in brackets () after the key
+Then, this dictionary can either have a 'specs' key, or the hyperparameters can be put directly as keys. If a 'specs' key is used, the associated value should be a dictionary containing the hyperparameters as keys:
+```python
+{'type':...,
+ 'specs':{...}}
+```
+OR
+```python
+{'type':...,
+ ...}
+```
+The names of the keys are the names of the hyperparameters used by Keras (req is for required, opt for optional) and are also listed below. The expected value type is given in brackets () after the key
 - For 'D': Input MUST have shape (n_samples, n_features)
     - 'units' or 'neurons' (req | int): Number of neurons for the layer (ex. 32)
     - 'activation' (req | str or callable): Activation function of the layer (ex. 'relu')
@@ -155,10 +165,29 @@ The names of the keys are the names of the hyperparameters used by Keras (req is
     {'type':'regressor',
      'model':...}
     ```
-    - 'model' (scikit-learn regressor): This is a fully trained sklearn regressor (ex. GradientBoostingRegressor)
-    - * Note that as most sklearn models do not use gradients, backpropagation will STOP at this layer. As a result, all previous layers will NOT be trained. As a result, it is advised to put this near the front of the model
+    - 'model' (req | scikit-learn regressor): This is a fully trained sklearn regressor (ex. GradientBoostingRegressor)
+    - * Note that as most sklearn models do not use gradients, backpropagation will STOP at this layer. As a result, all previous layers will NOT be trained. Because of this, it is advised to put this near the front of the model
     - * As a further note, if this layer is put in parallel with a standard Keras layer (ex. Dense) in an inception block, then the standard Keras layer and all other standard layers before it will still be trained. Issues only arise when the sklearn layer is in series with the other layers
     - This is primarily used for combining the outputs of different models
+- For 'NN'
+    - This allows you to put a custom pre-trained Keras model into the neural network
+    - For your dictionary, it must be of the form:
+    ```python
+    {'type':'NN', # or 'neural'
+     'specs':{'model':...,'freeze':...}
+    }
+    ```
+    OR
+    ```python
+    {'type':'NN', # or 'neural'
+     'model':...,
+     'freeze':...
+    }
+    ```
+    - 'model' (req | keras.Model): This is a pretrained Keras model you would like to insert into your model
+    - 'freeze' (opt | bool | default=False): Whether to freeze the weights and biases of the model
+    - This is often used for transfer learning
+    - * Unlike the 'regressor' layer, this does NOT stop backpropagation
 * Note: model_structure is recursive. This means you can nest ResNet blocks, Inception blocks, and Xception blocks easily
 
 

@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "adv_keras_regressor"
+version = "1.0.0"
+description = "A Python Keras wrapper that supports modern architectures and Scikit-learn workflows"
+readme = "README.md"
+requires-python = ">=3.10"
+
+dependencies = [
+    "scikit-learn",
+    "scipy",
+    "tensorflow",
+    "numpy",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]

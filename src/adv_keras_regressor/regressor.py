@@ -2,58 +2,28 @@ from sklearn.base import BaseEstimator, RegressorMixin
 from sklearn.utils.validation import check_X_y, check_array, check_is_fitted, validate_data
 from scipy.sparse import issparse
 from sklearn.metrics import r2_score
-import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers as kl
 import numpy as np
 
+from sklearn_layer import SKlearnLayer
+
 def shapes_equal(a, b):
+    '''
+    Checks if the shapes of two arrays are equal
+
+    :param a (array-like): The first array
+    :param b (array-like): The second array
+
+    :returns (bool): True if the shapes are equal
+                     False otherwise
+    '''
     if len(a) != len(b):
         return False
     return all(
         (x == y) or (x is None) or (y is None)
         for x, y in zip(a, b)
     )
-
-class SKlearnLayer(keras.layers.Layer):
-    '''
-    Provides support for sklearn models to act as layers in
-    a neural network
-    '''
-    def __init__(self, model):
-        '''
-        Attributes
-        - model (scikit-learn regressor): A fully traiend sklearn model
-                                          (ex. GradientBoostingRegressor)
-        '''
-        super().__init__()
-        self.model = model
-    
-    def call(self, inputs):
-        '''
-        This method decides how an input is passed through the layer
-
-        :param inputs (KerasTensor): The input tensor
-        
-        :return (KerasTensor): The tensor after the sklearn model is applied
-        '''
-        def regressor_pred(x):
-            pred = self.model.predict(x)
-            pred = np.asarray(pred, dtype=np.float32)
-
-            if pred.ndim == 1:
-                pred = pred.reshape(-1,1)
-
-            return pred
-
-        y = tf.numpy_function(
-            regressor_pred,
-            [inputs],
-            tf.float32
-        )
-
-        y.set_shape((None,1))
-        return y
 
 class AdvKerasRegressor(RegressorMixin,BaseEstimator):
     '''
@@ -75,7 +45,7 @@ class AdvKerasRegressor(RegressorMixin,BaseEstimator):
         verbose=1,
         loss="mse",
         optimizer="adam",
-        learning_rate=1e-4,
+        learning_rate=1e-3,
         random_state=None,
         shuffle=True,
     ):
@@ -313,6 +283,49 @@ class AdvKerasRegressor(RegressorMixin,BaseEstimator):
         x = kl.Add()([pre_x, out])
         return kl.Activation(final_activation)(x)
 
+    def _add_neural_block(self,layer_specs,ind,x):
+        '''
+        Adds a pretrained neural net into the model
+        This is generally for transfer learning
+
+        :param layer_specs (dict): A dictionary of the form
+                                   {'model':...,'freeze':...}
+                                   'model' is a keras.Model object
+                                   'freeze' is a bool determining whether
+                                   to freeze the weights and biases of
+                                   the neural net
+        :param ind (int or str): The index of this layer
+        :param x (KerasTensor): The tensor being passed through the model
+
+        :return (KerasTensor): The tensor after being passed through
+                               the given neural net
+        '''
+        model_in = layer_specs.get('model')
+
+        # Checks whether the inputs were correct
+        if model_in is None:
+            raise KeyError(f"No model given for neural layer {ind}")
+        if not isinstance(model_in, keras.Model):
+            raise TypeError(f"Model given to layer {ind} must be a keras.Model object")
+        
+        freeze = layer_specs.get('freeze',False)
+
+        # Cloning the model and retrieving the old weights and biases
+        model = keras.models.clone_model(model_in)
+        model.set_weights(model_in.get_weights())
+
+        # Whether to freeze the weights and biases
+        model.trainable = not freeze
+
+        # Checks whether the output of the last layer/block is the expected shape
+        expected = model.input_shape[1:]
+        actual = keras.backend.int_shape(x)[1:]
+        if expected != actual:
+            raise ValueError(f"Neural net layer expects input shape: {expected}\n"
+                             f"Instead got {actual}")
+
+        return model(x)
+
     def _add_inception_block(self,inception_specs,ind,x):
         '''
         Adds an inception block to the model with the given parameters
@@ -411,6 +424,7 @@ class AdvKerasRegressor(RegressorMixin,BaseEstimator):
     def _add_regressor_block(self,model,ind,x):
         '''
         Adds a layer to the model that is the output of a trained sklearn model
+        WARNING: Backpropagation will stop at this layer
 
         :param model (scikit-learn regressor): A fully trained scikit-learn regressor
                                                (ex. GradientBoostingRegressor)
@@ -458,6 +472,8 @@ class AdvKerasRegressor(RegressorMixin,BaseEstimator):
             model = layer_specs.get('model')
             
             return self._add_regressor_block(model,ind,x)
+        elif layer_type == 'NN' or layer_type.lower() == 'neural':
+            return self._add_neural_block(layer_specs,ind,x)
         else:
             return self._add_simple_block(layer_type,layer_specs,ind,x)
 
@@ -497,8 +513,8 @@ class AdvKerasRegressor(RegressorMixin,BaseEstimator):
         '''
         Trains the model on the given features and labels
 
-        :param X (array like): The features of shape (n_samples, ...)
-        :param y (array like): The labels of shape (n_samples, ...) or (n_samples,)
+        :param X (array-like): The features of shape (n_samples, ...)
+        :param y (array-like): The labels of shape (n_samples, ...) or (n_samples,)
         :param fit_params: Any additional fit parameters used in Keras
 
         :return (AdvKerasRegressor): The trained AdvKerasRegressor
@@ -590,7 +606,7 @@ class AdvKerasRegressor(RegressorMixin,BaseEstimator):
         '''
         Predicts the labels given the features
 
-        :param X (array like): The features of shape (n_samples, ...)
+        :param X (array-like): The features of shape (n_samples, ...)
 
         :return (numpy.ndarray): The labels of shape (n_samples, ...) or (n_samples,)
         '''
@@ -618,8 +634,8 @@ class AdvKerasRegressor(RegressorMixin,BaseEstimator):
         '''
         Returns the R^2 score for the model if applicable
 
-        :param X (array like): The features of shape (n_samples, ...)
-        :param y (array like): The labels of shape (n_samples, ...) or (n_samples,)
+        :param X (array-like): The features of shape (n_samples, ...)
+        :param y (array-like): The labels of shape (n_samples, ...) or (n_samples,)
 
         :return (float or ndarray of floats or None): The R^2 score or ndarray of R^2 scores
         '''
