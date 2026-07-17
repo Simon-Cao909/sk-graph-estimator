@@ -7,6 +7,7 @@ import numpy as np
 
 from .tools.sklearn_layer import SKlearnLayer
 from .tools.check_shapes import shapes_equal
+from .tools.quick_build_parser import parse_quick
 
 class SKGraphEstimator(BaseEstimator):
     '''
@@ -17,6 +18,7 @@ class SKGraphEstimator(BaseEstimator):
     def __init__(
         self,
         model_structure,
+        build_setting="normal",
         input_shape=None,
         epochs=100,
         batch_size=32,
@@ -34,7 +36,10 @@ class SKGraphEstimator(BaseEstimator):
         '''
         Attributes
         - model_structure (list or tuple): Specifies the model architecture
-                                           See architecture.md, examples.md for how to use this
+                                           See architecture.md for how to format this
+        - build_setting (str, default="normal"): Decides the format of model_structure
+                                                 Must be either 'normal' or 'quick'
+                                                 See architecture.md for more information
         - input_shape (tuple, default=None): The input shape
                                              If None, it will be guessed from the feature shape
         - epochs (int, default=100): The number of epochs to train the model for
@@ -56,6 +61,7 @@ class SKGraphEstimator(BaseEstimator):
         - shuffle (bool, default=True): Whether to shuffle the data before training
         '''
         self.model_structure = model_structure
+        self.build_setting = build_setting
         self.input_shape = input_shape
         self.epochs = epochs
         self.batch_size = batch_size
@@ -98,11 +104,13 @@ class SKGraphEstimator(BaseEstimator):
             raise TypeError("model_structure must be a list or tuple")
         if len(self.model_structure) == 0:
             raise ValueError("model_structure cannot be empty")
-        if any(not isinstance(struct,dict) for struct in self.model_structure):
-            raise TypeError("Each struct in model_structure must be a dict")
-        if any(struct.get('type') is None for struct in self.model_structure):
-            raise KeyError("Each struct in model_structure must have key 'type'")
-    
+
+        if self.build_setting == "normal":
+            if any(not isinstance(struct,dict) for struct in self.model_structure):
+                raise TypeError("Each struct in model_structure must be a dict")
+            if any(struct.get('type') is None for struct in self.model_structure):
+                raise KeyError("Each struct in model_structure must have key 'type'")
+
     def _project(self,x,target_shape):
         '''
         Safely projects a given tensor onto a given target shape
@@ -215,7 +223,8 @@ class SKGraphEstimator(BaseEstimator):
         elif layer_type == 'MP' or layer_type.lower() == 'max_pooling':
             return kl.MaxPooling2D(pool_size=layer_specs.get('pool_size',(2,2)),
                                    strides=layer_specs.get('strides'),
-                                   padding=layer_specs.get('padding','valid'))(x)
+                                   padding=layer_specs.get('padding','valid'),
+                                   data_format=layer_specs.get('data_format'))(x)
         elif layer_type == 'GAP' or layer_type.lower() in ['global_avg_pooling','global_average_pooling']:
             return kl.GlobalAveragePooling2D(data_format=layer_specs.get('data_format'))(x)
         elif layer_type == 'F' or layer_type.lower() in ['flat','flatten']:
@@ -423,7 +432,7 @@ class SKGraphEstimator(BaseEstimator):
         try:
             return SKlearnLayer(model)(x)
         except Exception as e:
-            print(f"Exception found in regressor layer {ind}: {e}")
+            raise RuntimeError(f"Exception found in regressor layer {ind}: {e}") from e
 
     def _add_block(self,struct,ind,x):
         '''
@@ -479,6 +488,10 @@ class SKGraphEstimator(BaseEstimator):
         self._validate_hyperparams()
 
         structs = self.model_structure
+
+        if self.build_setting == "quick":
+            structs = parse_quick(structs)
+
         for ind,struct in enumerate(structs):
             if ind == len(structs) - 1:
                 outputs = self._add_block(struct,ind,x)

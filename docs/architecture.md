@@ -1,5 +1,7 @@
 This file contains information on how to properly format model_structure to create your Keras model
 
+# For 'normal' build_setting
+
 To start, model_structure must be a list or tuple of dictionaries. The nth dictionary in this list or tuple denotes the nth hidden layer or block. 
 *** The output layer should be included in model_structure ***
 
@@ -43,10 +45,10 @@ The names of the keys are the names of the hyperparameters used by Keras (req is
 - For 'C' or 'CT': Input MUST have shape (n_samples,height,width,channels) or (n_samples,channels,height,width)
     - 'filters' (req | int): The number of filters (ex. 8)
     - 'kernel_size' (req | tuple): The size of the input passed to each neuron in the filter (ex. (3,3))
+    - 'activation' (req | str or callable): Activation function of the layer
     - 'strides' (opt | tuple | default=(1,1)): How we shift the group of neurons to use as input for the next neuron
     - 'padding' (opt | str | default='valid'): Either 'valid' or 'same'
     - 'data_format' (opt | str | default=None (Keras sets it to 'channels_last')): Either 'channels_first' or 'channels_last'
-    - 'activation' (req | str or callable): Activation function of the layer
 - For 'GN':
     - 'groups' (opt | int | default=32)
     - 'axis' (opt | int | default=-1)
@@ -54,11 +56,16 @@ The names of the keys are the names of the hyperparameters used by Keras (req is
     - 'center' (opt | bool | default=True)
     - 'scale' (opt | bool | default=True)
 - For 'BN':
-    - Same as 'GN' but no 'groups'
+    - 'axis' (opt | int | default=-1)
+    - 'momentum' (opt | float, default=0.99)
+    - 'epsilon' (opt | float | default=0.001)
+    - 'center' (opt | bool | default=True)
+    - 'scale' (opt | bool | default=True)
 - For 'MP':
     - 'pool_size' (opt | tuple | default=(2,2))
     - 'strides' (opt | tuple or None | default=None)
     - 'padding' (opt | str | default='valid')
+    - 'data_format' (opt | str | default=None (Keras sets it to 'channels_last'))
 - For 'GAP' or 'F':
     - 'data_format' (opt | str | default=None (Keras sets it to 'channels_last'))
 - For 'UP':
@@ -192,7 +199,7 @@ The names of the keys are the names of the hyperparameters used by Keras (req is
 
 
 ## EXAMPLES ##
-# Dense network:
+### Dense network:
 ```python
 model_structure = [
     {'type':'D', 'units':128, 'activation':'relu'},
@@ -201,7 +208,7 @@ model_structure = [
     {'type':'D', 'units':1, 'activation':'linear'}
 ]
 ```
-# Dense ResNet:
+### Dense ResNet:
 ```python
 model_structure = [
     {'type':'D', 'units':128, 'activation':'relu'},
@@ -218,7 +225,7 @@ model_structure = [
     {'type':'D', 'units':1, 'activation':'linear'}
 ]
 ```
-# Convolutional network
+### Convolutional network
 ```python
 model_structure = [
     {'type':'C', 'filters':32, 'kernel_size':(3,3),
@@ -234,7 +241,7 @@ model_structure = [
     {'type':'D', 'units':1, 'activation':'linear'}
 ]
 ```
-# Convolutional ResNet:
+### Convolutional ResNet:
 ```python
 [
     {'type':'C', 'filters':32,
@@ -262,7 +269,7 @@ model_structure = [
     {'type':'D','units':1,'activation':'linear'}
 ]
 ```
-# Inception:
+### Inception:
 ```python
 [
     {
@@ -294,7 +301,7 @@ model_structure = [
     {'type':'D','units':1,'activation':'linear'}
 ]
 ```
-# Xception:
+### Xception:
 ```python
 [
     {
@@ -318,7 +325,7 @@ model_structure = [
     {'type':'D','units':1,'activation':'linear'}
 ]
 ```
-# Joke model (it's theoretically possible)
+### Joke model (it's theoretically possible)
 ```python
 [
     {
@@ -364,3 +371,44 @@ model_structure = [
     {'type':'D','units':1,'activation':'linear'}
 ]
 ```
+
+# For 'quick' build_setting
+
+Please read the section for 'normal' build_setting before this.
+
+This is for when you don't want to spend a lot of time writing 'type':... or writing out every hyperparameter name. This allows you to format model_structure as a list of lists of the form:
+```python
+[
+ [layer_type,hyperparam1,hyperparam2,...],
+ [layer_type,hyperparam3,hyperparam4,...],
+ ...
+]
+```
+Where the ith element corresponds to the ith hidden layer. Again, the output layer must be included in model_structure
+
+The order of elements in the list should be as such:
+
+For simple layers
+- For 'D': [layer_type,units,activation]
+- For 'd': [layer_type,rate]
+- For 'C' or 'CT': [layer_type,filters,kernel_size,activation,strides,padding,data_format]
+- For 'GN': [layer_type,groups,axis,epsilon,center,scale]
+- For 'BN': [layer_type,axis,momentum,epsilon,center,scale]
+- For 'MP': [layer_type,pool_size,strides,padding,data_format]
+- For 'GAP' or 'F': [layer_type,data_format]
+- For 'UP': [layer_type,size,data_format]
+- For 'custom': [layer_type,layer]
+
+For advanced layers and blocks
+- For 'R': [layer_type,layers,final_activation,allow_projection]
+    - Here, layers should also be of the form [[layer_type,hyperparam1,...],[layer_type,hyperparam2,...]]
+- For 'I': [layer_type,branches]
+    - Here, each branch in branches should also be of the form [[layer_type,hyperparam1,...],[layer_type,hyperparam2,...]]
+- For 'X': [layer_type,xcep_specs,final_activation,allow_projection]
+    - Here, xcep_specs should be of the form [[filters,kernel_size,activation,padding],...], where the ith element in the list corresponds to the hyperparameters of the ith separable convolution layer
+- For 'regressor': [layer_type,model]
+- For 'NN': [layer_type,model,freeze]
+
+Note that you can still use all aliases for layer_type
+
+Note that optional hyperparameters are still optional. However, if you want to set a hyperparameter that is supposed to be at the nth index, then you must specify all the hyperparameters before it
