@@ -121,3 +121,5 @@ def parse_quick(structs):
         
         else:
             new_structure.append({'type':layer_type})
+    
+    return new_structure
