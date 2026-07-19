@@ -110,6 +110,12 @@ class SKGraphEstimator(BaseEstimator):
                 raise TypeError("Each struct in model_structure must be a dict")
             if any(struct.get('type') is None for struct in self.model_structure):
                 raise KeyError("Each struct in model_structure must have key 'type'")
+        
+        if self.validation_split is not None and not (0 <= self.validation_split < 1):
+            raise ValueError("validation_split must be in [0, 1).")
+        
+        if self.early_stopping and (self.validation_split is None or self.validation_split <= 0):
+            raise ValueError("early_stopping=True requires validation_split > 0.")
 
     def _project(self,x,target_shape):
         '''
@@ -142,6 +148,26 @@ class SKGraphEstimator(BaseEstimator):
                              use_bias=False)(x)
         
         raise ValueError(f"Projection not supported for target_shape {target_shape}")
+
+    def _get_callbacks(self):
+        callbacks = []
+
+        if self.early_stopping:
+            patience = self.n_iter_no_change
+            if patience is None:
+                patience = max(5, int(self.epochs * 0.1))
+
+            callbacks.append(
+                keras.callbacks.EarlyStopping(
+                    monitor="val_loss",
+                    mode="min",
+                    patience=patience,
+                    restore_best_weights=True,
+                    verbose=0,
+                )
+            )
+        
+        return callbacks
 
 
     ### ADDING BLOCKS ###
@@ -555,29 +581,7 @@ class SKGraphEstimator(BaseEstimator):
                 f"output_shape={self.output_shape_}, but y has shape {y.shape[1:]}"
             )
 
-        callbacks = []
-
-        # Checks whether the validation_split input is proper
-        if self.validation_split is not None and not (0 <= self.validation_split < 1):
-            raise ValueError("validation_split must be in [0, 1).")
-        
-        # Adding early stopping callback if applicable
-        if self.early_stopping:
-            if self.validation_split is None or self.validation_split <= 0:
-                raise ValueError("early_stopping=True requires validation_split > 0.")
-            patience = self.n_iter_no_change
-            if patience is None:
-                patience = max(5, int(self.epochs * 0.1))
-
-            callbacks.append(
-                keras.callbacks.EarlyStopping(
-                    monitor="val_loss",
-                    mode="min",
-                    patience=patience,
-                    restore_best_weights=True,
-                    verbose=0,
-                )
-            )
+        callbacks = self._get_callbacks()
 
         history = self.model_.fit(
             X,
