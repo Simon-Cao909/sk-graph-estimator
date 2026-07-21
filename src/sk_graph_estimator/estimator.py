@@ -53,7 +53,9 @@ class SKGraphEstimator(BaseEstimator):
                                     This will determine how the training and validation data are split
                                     with validation_split being the fraction of validation data
         - verbose (int): If 0, nothing is printed. If 1, the process of training is printed
-        - loss (str or callable, default='mse'): The loss function used. See Keras for custom ones
+        - loss (str or callable or list, default='mse'): The loss function used. See Keras for custom ones
+                                                        If your model has a multi-output layer, you can use
+                                                        a list where the ith loss corresponds to the ith output
         - metrics (list, tuple, dict, or None, default=None): The metrics tracked during training
         - optimizer (str, default='adam'): The optimizer used in training. See Keras for possibilities
         - learning_rate (float, default=1e-4): The learning rate for training
@@ -187,7 +189,21 @@ class SKGraphEstimator(BaseEstimator):
         :return (np.ndarray or tuple of ndarrays): If y was given, returns X and y as an array
                                                    Else, X will be returned as an array
         '''
-        if len(self.output_shape_) <= 2 and len(self.input_shape_) <= 2:
+
+        if self.is_multi_output_ and y is not None:
+            if len(y) != len(self.output_shape_):
+                raise ValueError(
+                    f"Expected {len(self.output_shape_)} outputs, "
+                    f"got {len(y)} outputs instead"
+                )
+            
+            for i,(target,expec_shape) in enumerate(zip(y,self.output_shape_)):
+                if target.shape[1:] != expec_shape:
+                    raise ValueError(
+                        f"For output {i}: expected shape {expec_shape}, "
+                        f"got {target.shape[1:]} instead"
+                    )
+        elif len(self.output_shape_) <= 2 and len(self.input_shape_) <= 2:
             if y is None:
                 X = check_array(X, accept_sparse=False, dtype=np.float32)
                 X = validate_data(self,X,reset=False)
@@ -207,10 +223,13 @@ class SKGraphEstimator(BaseEstimator):
                 f"{self.input_shape_} input shape."
             )
         
-        if y is not None and self.output_shape_ != y.shape[1:]:
+        if y is not None and not self.is_multi_output_ and self.output_shape_ != y.shape[1:]:
             raise ValueError(
                 f"output_shape={self.output_shape_}, but y has shape {y.shape[1:]}"
             )
+        
+        if self.is_multi_output_:
+            return np.asarray(X) if y is None else (np.asarray(X),y)
         
         return np.asarray(X) if y is None else (np.asarray(X), np.asarray(y))
 
@@ -250,38 +269,45 @@ class SKGraphEstimator(BaseEstimator):
                 raise ValueError(f"drop_out values must be in [0,1) for layer {ind}")
             
             return kl.Dropout(layer_specs['rate'])(x)
-        elif layer_type == 'C' or layer_type.lower() in ['conv','convolution','conv2d']:
-            if len(x.shape) != 4:
-                raise ValueError(f"Expected input to Conv2D to have rank 4, got shape {x.shape}")
-            if layer_specs.get('filters') is None:
-                raise KeyError(f"Filters must be given for layer {ind}")
-            if layer_specs.get('activation') is None:
-                raise KeyError(f"No activation function given for layer {ind}")
-            if layer_specs.get('kernel_size') is None:
-                raise KeyError(f"No kernel size given for convolutional layer {ind}")
+        elif layer_type in ['C','CT'] or layer_type.lower() in ['conv','convolution']+\
+                                                               ['conv_transpose','convolution_transpose']:
             
-            return kl.Conv2D(layer_specs['filters'],
-                             kernel_size=layer_specs['kernel_size'],
-                             strides=layer_specs.get('strides',(1,1)),
-                             padding=layer_specs.get('padding',"valid"),
-                             data_format=layer_specs.get('data_format'),
-                             activation=layer_specs.get('activation'))(x)
-        elif layer_type == 'CT' or layer_type.lower() in ['conv_transpose','convolution_transpose','conv2dtranspose']:
-            if len(x.shape) != 4:
-                raise ValueError(f"Expected input to Conv2D to have rank 4, got shape {x.shape}")
+            if layer_type == 'C' or layer_type.lower() in ['conv','convolution']:
+                layer_type = 'C'
+            else:
+                layer_type = 'CT'
+
             if layer_specs.get('filters') is None:
                 raise KeyError(f"Filters must be given for layer {ind}")
             if layer_specs.get('activation') is None:
                 raise KeyError(f"No activation function given for layer {ind}")
-            if layer_specs.get('kernel_size') is None:
-                raise KeyError(f"No kernel size given for convolutional layer {ind}")
+            
+            kernel_size = layer_specs.get('kernel_size')
 
-            return kl.Conv2DTranspose(layer_specs['filters'],
-                                      kernel_size=layer_specs['kernel_size'],
-                                      strides=layer_specs.get('strides',(1,1)),
-                                      padding=layer_specs.get('padding','valid'),
-                                      data_format=layer_specs.get('data_format'),
-                                      activation=layer_specs.get('activation'))(x)
+            if kernel_size is None:
+                raise KeyError(f"No kernel size given for convolutional layer {ind}")
+            if not isinstance(kernel_size,tuple):
+                raise ValueError(f"Layer {ind}: kernel_size must be tuple")
+
+            conv_d = len(kernel_size)
+            default_stride = tuple([1]*conv_d)
+                        
+            if len(x.shape) != conv_d+2:
+                raise ValueError(f"Expected input to Conv{conv_d}D to have rank {conv_d+2}, got shape {x.shape}")
+
+            if conv_d == 1:
+                Conv = kl.Conv1D if layer_type == 'C' else kl.Conv1DTranspose
+            elif conv_d == 2:
+                Conv = kl.Conv2D if layer_type == 'C' else kl.Conv2DTranspose
+            elif conv_d == 3:
+                Conv = kl.Conv3D if layer_type == 'C' else kl.Conv3DTranspose
+
+            return Conv(layer_specs['filters'],
+                        kernel_size=layer_specs['kernel_size'],
+                        strides=layer_specs.get('strides',default_stride),
+                        padding=layer_specs.get('padding',"valid"),
+                        data_format=layer_specs.get('data_format'),
+                        activation=layer_specs.get('activation'))(x)
         elif layer_type == 'GN' or layer_type.lower() in ['group_norm','group_normalization']:
             return kl.GroupNormalization(groups=layer_specs.get('groups',32),
                                          axis=layer_specs.get('axis',-1),
@@ -393,6 +419,31 @@ class SKGraphEstimator(BaseEstimator):
 
         return model(x)
 
+    def _add_multioutput_block(self,layer_specs,ind,x):
+        branches = layer_specs.get('branches')
+
+        if branches is None:
+            raise KeyError(f"Block {ind} must have branches")
+        if not isinstance(branches,(list,tuple)) or len(branches) == 0:
+            raise ValueError(f"Block {ind}: branches must be a non-empty list or tuple")
+        
+        outputs = []
+        for branch_ind, branch in enumerate(branches):
+            if not isinstance(branch, (list,tuple)) or len(branch) == 0:
+                raise ValueError(f"Block {ind}, branch index {branch_ind}: "
+                                 "each branch must be a non-empty list or tuple of layer specs")
+            
+            out = x
+            for sub_ind, struct in enumerate(branch):
+                out = self._add_block(struct,f"{ind}.{branch_ind}.{sub_ind}",out)
+            
+            outputs.append(out)
+        
+        if len(outputs) == 1:
+            outputs = outputs[0]
+        
+        return outputs
+
     def _add_inception_block(self,inception_specs,ind,x):
         '''
         Adds an inception block to the model with the given parameters
@@ -412,23 +463,10 @@ class SKGraphEstimator(BaseEstimator):
 
         :return (KerasTensor): The tensor after the inception block is applied
         '''
-        branches = inception_specs.get('branches')
-        if branches is None:
-            raise KeyError(f"Inception block {ind} must have branches")
-        if not isinstance(branches,(list,tuple)) or len(branches) == 0:
-            raise ValueError(f"Inception block {ind}: branches must be a non-empty list or tuple")
-        
-        outputs = []
-        for branch_ind, branch in enumerate(branches):
-            if not isinstance(branch, (list,tuple)) or len(branch) == 0:
-                raise ValueError(f"Inception block {ind}, branch index {branch_ind}: "
-                                 "each branch must be a non-empty list or tuple of layer specs")
-            
-            out = x
-            for sub_ind, struct in enumerate(branch):
-                out = self._add_block(struct,f"{ind}.{branch_ind}.{sub_ind}",out)
-            
-            outputs.append(out)
+        outputs = self._add_multioutput_block(inception_specs,ind,x)
+
+        if not isinstance(outputs,list):
+            return outputs
         
         shapes = [keras.backend.int_shape(out) for out in outputs]
         compare = shapes[0][1:-1]
@@ -436,9 +474,6 @@ class SKGraphEstimator(BaseEstimator):
             raise ValueError(f"Inception block {ind}: "
                              "all branch outputs need to have matching spatial dimensions\n"
                              f"Got shapes: {shapes}")
-
-        if len(outputs) == 1:
-            return outputs[0]
         
         return kl.Concatenate(axis=-1)(outputs)
     
@@ -541,6 +576,8 @@ class SKGraphEstimator(BaseEstimator):
             return self._add_regressor_block(model,ind,x)
         elif layer_type == 'NN' or layer_type.lower() == 'neural':
             return self._add_neural_block(layer_specs,ind,x)
+        elif layer_type == 'multi-output':
+            return self._add_multioutput_block(layer_specs,ind,x)
         else:
             return self._add_simple_block(layer_type,layer_specs,ind,x)
 
@@ -553,6 +590,8 @@ class SKGraphEstimator(BaseEstimator):
 
         :return (keras.Model): The fully built and compiled model
         '''
+        self.is_multi_output_ = False
+
         input_shape = self.input_shape_
 
         inputs = kl.Input(shape=input_shape)
@@ -570,9 +609,20 @@ class SKGraphEstimator(BaseEstimator):
             if ind == len(structs) - 1:
                 outputs = self._add_block(struct,ind,x)
             else:
+                if struct['type'] == 'multi-output':
+                    raise ValueError("Multi-output block must come last")
+                
                 x = self._add_block(struct,ind,x)
         
-        self.output_shape_ = keras.backend.int_shape(outputs)[1:]
+        self.is_multi_output_ = isinstance(outputs,list)
+
+        if self.is_multi_output_:
+            self.output_shape_ = [
+                keras.backend.int_shape(output)[1:]
+                for output in outputs
+            ]
+        else:
+            self.output_shape_ = keras.backend.int_shape(outputs)[1:]
 
         # Creates and compiles the model
         model = keras.Model(inputs, outputs)
@@ -605,17 +655,38 @@ class SKGraphEstimator(BaseEstimator):
         self.model_ = self.build_model()
 
         # If y is of shape (n_samples,), we need it to be of shape (n_samples,1)
-        self.y_was_1d_ = y.ndim == 1
-        if y.ndim == 1:
-            y = y.reshape(-1, 1)
+        if self.is_multi_output_:
+            self.y_was_1d_ = [
+                np.asarray(target).ndim == 1
+                for target in y
+            ]
+
+            y = [
+                np.asarray(target).reshape(-1,1)
+                if np.asarray(target).ndim == 1
+                else np.asarray(target)
+                for target in y
+            ]
+        else:
+            y = np.asarray(y)
+
+            self.y_was_1d_ = y.ndim == 1
+
+            if y.ndim == 1:
+                y = y.reshape(-1, 1)
         
         X,y = self._validate_data(X,y)
 
         callbacks = self._get_callbacks()
 
+        if self.is_multi_output_:
+            y = [target.astype(np.float32) for target in y]
+        else:
+            y = y.astype(np.float32)
+
         history = self.model_.fit(
             X,
-            y.astype(np.float32),
+            y,
             epochs=self.epochs,
             batch_size=self.batch_size,
             validation_split=self.validation_split,
@@ -645,7 +716,14 @@ class SKGraphEstimator(BaseEstimator):
 
         pred = self.model_.predict(X, verbose=0)
 
-        if getattr(self, "y_was_1d_", False):
-            return pred.ravel()
+        if not self.is_multi_output_:
+            if self.y_was_1d_:
+                return pred.ravel()
+        else:
+            return [
+                p.ravel() if was_1d else p
+                for p, was_1d in zip(pred, self.y_was_1d_)
+            ]
+
 
         return pred

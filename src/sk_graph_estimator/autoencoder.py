@@ -103,6 +103,9 @@ class SKGraphAutoencoder(SKGraphEstimator):
             encoder_structs = parse_quick(encoder_structs)
 
         for ind,struct in enumerate(encoder_structs):
+            if struct['type'] == 'multi-output':
+                raise NotImplementedError("Multi-output encoders are not supported")
+
             if ind == len(encoder_structs) - 1:
                 if model_type == 'standard':
                     latent = self._add_block(struct,ind,x)
@@ -135,6 +138,9 @@ class SKGraphAutoencoder(SKGraphEstimator):
             decoder_structs = parse_quick(decoder_structs)
 
         for ind, struct in enumerate(decoder_structs):
+            if struct['type'] == 'multi-output':
+                raise NotImplementedError("Multi-output decoders are not supported")
+            
             if ind == len(decoder_structs) - 1:
                 decoded = self._add_block(struct,ind,x)
             else:
@@ -188,6 +194,8 @@ class SKGraphAutoencoder(SKGraphEstimator):
 
         :return (keras.Model): The autoencoder model
         '''
+        self.is_multi_output_ = False
+
         self._validate_hyperparams()
         model_type = self.model_type.lower()
 
@@ -198,6 +206,9 @@ class SKGraphAutoencoder(SKGraphEstimator):
             AutoEncoder = SAE
         elif model_type == 'variational':
             AutoEncoder = VAE
+        else:
+            raise ValueError("Model type must be either "
+                             "'standard' or 'variational'")
         
         model = AutoEncoder(self.encoder_,self.decoder_)
         model.compile(optimizer=self._make_optimizer())
@@ -220,10 +231,10 @@ class SKGraphAutoencoder(SKGraphEstimator):
             keras.utils.set_random_seed(self.random_state)
 
         self.input_shape_ = self.input_shape if self.input_shape is not None else X.shape[1:]
-
-        X = self._validate_data(X)
         
         self.model_ = self.build_model()
+
+        X = self._validate_data(X)
 
         if self.output_shape_ != self.input_shape_:
             raise ValueError(

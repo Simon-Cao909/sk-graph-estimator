@@ -8,8 +8,8 @@ To start, model_structure must be a list or tuple of dictionaries. The nth dicti
 Each dictionary in this list requires a key 'type', which denotes the type of layer or block you'd like to add. The value associated with this key can be:
 - 'D' or 'dense'
 - 'd' or 'dropout'
-- 'C' or 'conv', 'convolution', 'conv2d'
-- 'CT' or 'conv_transpose', 'convolution_transpose', 'conv2dtranspose'
+- 'C' or 'conv', 'convolution'
+- 'CT' or 'conv_transpose', 'convolution_transpose'
 - 'GN' or 'group_norm', 'group_normalization'
 - 'BN' or 'batch_norm', 'batch_normalization'
 - 'MP' or 'max_pooling'
@@ -24,6 +24,7 @@ More advanced types:
 - 'X' or 'xcep', 'xception'
 - 'regressor'
 - 'NN' or 'neural'
+- 'multi-output'
 
 ## For simple layers:
 Then, this dictionary can either have a 'specs' key, or the hyperparameters can be put directly as keys. If a 'specs' key is used, the associated value should be a dictionary containing the hyperparameters as keys:
@@ -42,11 +43,13 @@ The names of the keys are the names of the hyperparameters used by Keras (req is
     - 'activation' (req | str or callable): Activation function of the layer (ex. 'relu')
 - For 'd':
     - 'rate' (req | float from [0,1)): Dropout rate (ex. 0.1)
-- For 'C' or 'CT': Input MUST have shape (n_samples,height,width,channels) or (n_samples,channels,height,width)
+- For 'C' or 'CT': Input MUST have shape (n_samples,...,channels) or (n_samples,channels,...)
     - 'filters' (req | int): The number of filters (ex. 8)
     - 'kernel_size' (req | tuple): The size of the input passed to each neuron in the filter (ex. (3,3))
+        - The dimension of the tuple will decide which convolutional layer to use
+        - Ex. For 1-D kernel_size, the 1-D convolution layer will be used
     - 'activation' (req | str or callable): Activation function of the layer
-    - 'strides' (opt | tuple | default=(1,1)): How we shift the group of neurons to use as input for the next neuron
+    - 'strides' (opt | tuple | default=(1,1,...)): How we shift the group of neurons to use as input for the next neuron
     - 'padding' (opt | str | default='valid'): Either 'valid' or 'same'
     - 'data_format' (opt | str | default=None (Keras sets it to 'channels_last')): Either 'channels_first' or 'channels_last'
 - For 'GN':
@@ -195,6 +198,10 @@ The names of the keys are the names of the hyperparameters used by Keras (req is
     - 'freeze' (opt | bool | default=False): Whether to freeze the weights and biases of the model
     - This is often used for transfer learning
     - * Unlike the 'regressor' layer, this does NOT stop backpropagation
+- For 'multi-output':
+    - This must be the last layer
+    - The structure of this is the same as inception, but now the outputs will simply be returned instead of concatenated
+    - The ith branch will be the ith output
 * Note: model_structure is recursive. This means you can nest ResNet blocks, Inception blocks, and Xception blocks easily
 
 

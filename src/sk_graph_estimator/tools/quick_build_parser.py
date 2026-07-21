@@ -43,7 +43,10 @@ def parse_quick(structs):
             filters = safe_get(struct,1)
             kernel_size = safe_get(struct,2)
             activation = safe_get(struct,3)
-            strides = safe_get(struct,4,(1,1))
+
+            default_stride = tuple([1]*len(kernel_size))
+            
+            strides = safe_get(struct,4,default_stride)
             padding = safe_get(struct,5,"valid")
             data_format = safe_get(struct,6)
             new_structure.append({'type':layer_type,'filters':filters,'kernel_size':kernel_size,
@@ -91,7 +94,7 @@ def parse_quick(structs):
             new_structure.append({'type':layer_type,'layers':layers,
                                   'final_activation':final_activation,
                                   'allow_projection':allow_projection})
-        elif layer_type == 'I' or layer_type.lower() in ['inception','incep']:
+        elif layer_type == 'I' or layer_type.lower() in ['inception','incep','multi-output']:
             branches = [parse_quick(branch) for branch in safe_get(struct,1)]
             new_structure.append({'type':layer_type,'branches':branches})
         elif layer_type == 'X' or layer_type.lower() in ['xcep','xception']:

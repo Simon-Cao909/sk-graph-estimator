@@ -1,6 +1,7 @@
 from sklearn.base import ClassifierMixin
 from .estimator import SKGraphEstimator
 from sklearn.metrics import accuracy_score
+import numpy as np
 
 class SKGraphClassifier(SKGraphEstimator, ClassifierMixin):
     '''
@@ -18,6 +19,7 @@ class SKGraphClassifier(SKGraphEstimator, ClassifierMixin):
         :return (float or ndarray of floats or None): The accuracy score or ndarray of scores
         '''
         if len(self.output_shape_) <= 2:
-            return accuracy_score(y, self.predict(X))
+            return accuracy_score(np.argmax(y, axis=1),
+                                  np.argmax(self.predict(X), axis=1))
         else:
             raise ValueError("Scoring is only defined for vector-valued outputs")

@@ -20,7 +20,9 @@ The required and optional attributes during initialization
                             This will determine how the training and validation data are split
                             with validation_split being the fraction of validation data
 - verbose (int): If 0, nothing is printed. If 1, the process of training is printed
-- loss (str or callable, default='mse'): The loss function used. See Keras for custom ones
+- loss (str or callable or list, default='mse'): The loss function used. See Keras for custom ones
+                                                 If your model has a multi-output layer, you can use
+                                                 a list where the ith loss corresponds to the ith output
 - metrics (list, tuple, dict, or None, default=None): The metrics tracked during training
 - optimizer (str, default='adam'): The optimizer used in training. See Keras for possibilities
 - learning_rate (float, default=1e-4): The learning rate for training
