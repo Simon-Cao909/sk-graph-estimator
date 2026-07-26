@@ -37,32 +37,76 @@ class SKGraphAutoencoder(SKGraphEstimator):
     ):
         '''
         Attributes
-        - encoder_structure (list or tuple): model structure for the encoder
-                                             See architecture.md for how to format this
-        - decoder_structure (list or tuple): model structure for the decoder
-                                             See architecture.md for how to format this
-        - model_type (str, default='standard'): Specifies the autoencoder type
-                                                Must be either 'standard' or 'variational'
-        - build_setting (str, default='normal'): Decides the format of model_structure
-                                                 Must be either 'normal' or 'quick'
-                                                 See architecture.md for more information
-        - input_shape (tuple, default=None): The input shape
-                                             If None, it will be guessed from the feature shape
-        - epochs (int, default=100): The number of epochs to train the model for
-        - batch_size (int, default=32): The batch size for training
-        - early_stopping (bool, default=True): Whether the model should stop training early if validation
-                                               loss doesn't drop after n_iter_no_change iterations
-        - n_iter_no_change (int, default=10): The amount of iterations without validation 
-                                              loss change until the model stops training
-                                              (only matters if early_stopping is True)
-        - validation_split (float): Should be between 0 and 1
-                                    This will determine how the training and validation data are split
-                                    with validation_split being the fraction of validation data
-        - verbose (int): If 0, nothing is printed. If 1, the process of training is printed
-        - optimizer (str, default='adam'): The optimizer used in training. See Keras for possibilities
-        - learning_rate (float, default=1e-4): The learning rate for training
-        - random_state (int or None, default=None): The random state. Used for reproducible results
-        - shuffle (bool, default=True): Whether to shuffle the data before training
+        ----------
+        encoder_structure : list or tuple
+            Model structure for the encoder.
+
+            See architecture.md for how to format this.
+
+        decoder_structure : list or tuple
+            Model structure for the decoder.
+
+            See architecture.md for how to format this.
+
+        model_type : str, default='standard'
+            Specifies the autoencoder type.
+
+            Must be either ``'standard'`` or ``'variational'``.
+
+        build_setting : str, default='normal'
+            Decides the format of model_structure.
+
+            Must be either ``'normal'`` or ``'quick'``.
+
+            See architecture.md for more information.
+
+        input_shape : tuple, default=None
+            The input shape.
+
+            If None, it will be guessed from the feature shape.
+
+        epochs : int, default=100
+            The number of epochs to train the model for.
+
+        batch_size : int, default=32
+            The batch size for training.
+
+        early_stopping : bool, default=True
+            Whether the model should stop training early if validation
+            loss doesn't drop after n_iter_no_change iterations.
+
+        n_iter_no_change : int, default=10
+            The amount of iterations without validation loss change until
+            the model stops training.
+
+            (Only matters if early_stopping is True.)
+
+        validation_split : float
+            Should be between 0 and 1.
+
+            This will determine how the training and validation data are split,
+            with validation_split being the fraction of validation data.
+
+        verbose : int
+            If 0, nothing is printed.
+
+            If 1, the process of training is printed.
+
+        optimizer : str, default='adam'
+            The optimizer used in training.
+
+            See Keras for possibilities.
+
+        learning_rate : float, default=1e-4
+            The learning rate for training.
+
+        random_state : int or None, default=None
+            The random state.
+
+            Used for reproducible results.
+
+        shuffle : bool, default=True
+            Whether to shuffle the data before training.
         '''
         model_structure = list(encoder_structure) + list(decoder_structure)
 
@@ -90,10 +134,18 @@ class SKGraphAutoencoder(SKGraphEstimator):
 
     def _build_encoder(self):
         '''
-        Builds the encoder half of the autoencoder using
-        the given encoder_structure
+        Builds the encoder half of the autoencoder using the given
+        encoder_structure.
 
-        :return (keras.Model): The encoder model
+        Returns
+        -------
+        encoder : keras.Model
+            The encoder model.
+        
+        Raises
+        ------
+        NotImplementedError
+            If the multi-output layer is used.
         '''
         model_type = self.model_type.lower()
         input_shape = self.input_shape_
@@ -128,10 +180,18 @@ class SKGraphAutoencoder(SKGraphEstimator):
     
     def _build_decoder(self):
         '''
-        Builds the decoder half of the model structure using
-        the given decoder_structure
+        Builds the decoder half of the model structure using the given
+        decoder_structure.
 
-        :return (keras.Model): The decoder model
+        Returns
+        -------
+        decoder : keras.Model
+            The decoder model.
+        
+        Raises
+        ------
+        NotImplementedError
+            If the multi-output layer is used.
         '''
         decoder_inputs = keras.Input(shape=self.latent_shape_)
 
@@ -156,14 +216,28 @@ class SKGraphAutoencoder(SKGraphEstimator):
 
     def _use_model(self,arr,which):
         '''
-        Predicts using the encoder or decoder
+        Predicts using the encoder or decoder.
 
-        :param arr (array-like): The input array for the encoder
-                                 or latent array for the decoder
-        :param which (str): The model to be used
-                            Must be either 'encoder' or 'decoder'
+        Parameters
+        ----------
+        arr : array-like
+            The input array for the encoder or latent array for the decoder.
+
+        which : str
+            The model to be used.
+
+            Must be either ``'encoder'`` or ``'decoder'``.
+
+        Returns
+        -------
+        y : np.ndarray
+            The output of the model.
         
-        :return (np.ndarray): The output of the model
+        Raises
+        ------
+        ValueError
+            If the features shape is not equal 
+            to the expected shape.
         '''
         self._check_is_fitted()
         arr = np.asarray(arr)
@@ -195,9 +269,18 @@ class SKGraphAutoencoder(SKGraphEstimator):
     def build_model(self):
         '''
         Builds and compiles the autoencoder using the given
-        encoder_structure and decoder_structure
+        encoder_structure and decoder_structure.
 
-        :return (keras.Model): The autoencoder model
+        Returns
+        -------
+        model : keras.Model
+            The autoencoder model.
+        
+        Raises
+        ------
+        ValueError
+            If the model type is not 'standard' 
+            or 'variational'.
         '''
         self.is_multi_output_ = False
 
@@ -222,13 +305,28 @@ class SKGraphAutoencoder(SKGraphEstimator):
     
     def fit(self, X, y = None, **fit_params):
         '''
-        Trains the model on the given features
+        Trains the model on the given features.
 
-        :param X (array-like): The features of shape (n_samples, *input_shape_)
-        :param y (None): Leave this as None
-        :param fit_params: Any additional fit parameters used in Keras
+        Parameters
+        ----------
+        X : array-like
+            The features of shape ``(n_samples, *input_shape_)``.
 
-        :return (self): The trained autoencoder
+        y : None, default=None
+            Leave this as None.
+
+        **fit_params
+            Any additional fit parameters used in Keras.
+
+        Returns
+        -------
+        self
+            The trained autoencoder.
+        
+        Raises
+        ------
+        ValueError
+            If the input and output shape are not the same.
         '''
         X = np.asarray(X)
 
@@ -269,13 +367,22 @@ class SKGraphAutoencoder(SKGraphEstimator):
         
     def score(self,X,y=None):
         '''
-        Scores the model based on how it performs on given data
-        Returns the negative MSE score
+        Scores the model based on how it performs on given data.
 
-        :param X (array-like): The features of shape (n_samples, *input_shape_)
-        :param y (array-like or list): Leave this as None
+        Returns the negative MSE score.
 
-        :return (float or None): The negative MSE score
+        Parameters
+        ----------
+        X : array-like
+            The features of shape ``(n_samples, *input_shape_)``.
+
+        y : None, default=None
+            Leave this as None.
+
+        Returns
+        -------
+        score : float or None
+            The negative MSE score.
         '''
         return compute_score(X,self.predict(X),
                              scoring_func=self.scoring_func,
@@ -286,26 +393,50 @@ class SKGraphAutoencoder(SKGraphEstimator):
 
     def encode(self,X):
         '''
-        Encodes the given input
+        Encodes the given input.
 
-        :param X (array-like): The input array of shape (n_samples, *input_shape_)
-                               or input_shape_
+        Parameters
+        ----------
+        X : array-like
+            The input array of shape ``(n_samples, *input_shape_)``
+            or ``input_shape_``.
 
-        :return (np.ndarray): The latent representation of X
-                              of shape (n_samples, *latent_shape_)
-                              or latent_shape_
+        Returns
+        -------
+        latent : np.ndarray
+            The latent representation of X of shape
+            ``(n_samples, *latent_shape_)`` or ``latent_shape_``.
+        
+        Raises
+        ------
+        ValueError
+            If the input shape is not equal 
+            to ``(n_samples, *input_shape_)`` 
+            or ``input_shape_``
         '''
         return self._use_model(X,'encoder')
     
     def decode(self,latent):
         '''
-        Decodes the given latent representation
+        Decodes the given latent representation.
 
-        :param latent (array-like): The latent array of shape (n_samples, *latent_shape_)
-                                    or latent_shape_
+        Parameters
+        ----------
+        latent : array-like
+            The latent array of shape ``(n_samples, *latent_shape_)``
+            or ``latent_shape_``.
 
-        :return (np.ndarray): The output of the decoder
-                              of shape (n_samples, *output_shape_)
-                              or output_shape_
+        Returns
+        -------
+        decoded : np.ndarray
+            The output of the decoder of shape
+            ``(n_samples, *output_shape_)`` or ``output_shape_``.
+        
+        Raises
+        ------
+        ValueError
+            If the latent shape is not equal 
+            to ``(n_samples, *latent_shape_)`` 
+            or ``latent_shape_``
         '''
         return self._use_model(latent,'decoder')

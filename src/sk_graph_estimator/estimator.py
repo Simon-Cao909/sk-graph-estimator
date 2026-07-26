@@ -40,36 +40,71 @@ class SKGraphEstimator(BaseEstimator):
     ):
         '''
         Attributes
-        - model_structure (list or tuple): Specifies the model architecture
-                                           See architecture.md for how to format this
-        - build_setting (str, default="normal"): Decides the format of model_structure
-                                                 Must be either 'normal' or 'quick'
-                                                 See architecture.md for more information
-        - input_shape (tuple, default=None): The input shape
-                                             If None, it will be guessed from the feature shape
-        - epochs (int, default=100): The number of epochs to train the model for
-        - batch_size (int, default=32): The batch size for training
-        - early_stopping (bool, default=True): Whether the model should stop training early if validation
-                                               loss doesn't drop after n_iter_no_change iterations
-        - n_iter_no_change (int, default=10): The amount of iterations without validation 
-                                              loss change until the model stops training
-                                              (only matters if early_stopping is True)
-        - validation_split (float): Should be between 0 and 1
-                                    This will determine how the training and validation data are split
-                                    with validation_split being the fraction of validation data
-        - verbose (int): If 0, nothing is printed. If 1, the process of training is printed
-        - loss (str or callable or list, default='mse'): The loss function used. See Keras for custom ones
-                                                        If your model has a multi-output layer, you can use
-                                                        a list where the ith loss corresponds to the ith output
-        - metrics (list, tuple, dict, or None, default=None): The metrics tracked during training
-        - optimizer (str, default='adam'): The optimizer used in training. See Keras for possibilities
-        - learning_rate (float, default=1e-4): The learning rate for training
-        - random_state (int or None, default=None): The random state. Used for reproducible results
-        - shuffle (bool, default=True): Whether to shuffle the data before training
-        - scoring_weights (list or tuple or None, default=None): For multi-headed output only
-                                                                 Determines how the average score is weighted
-                                                                 The ith element of this denotes the weighting of
-                                                                 the score corresponding to the ith output
+        ----------
+        model_structure : list or tuple
+            Specifies the model architecture.
+            See architecture.md for how to format this.
+
+        build_setting : str, default="normal"
+            Decides the format of model_structure.
+            Must be either 'normal' or 'quick'.
+            See architecture.md for more information.
+
+        input_shape : tuple, default=None
+            The input shape.
+            If None, it will be guessed from the feature shape.
+
+        epochs : int, default=100
+            The number of epochs to train the model for.
+
+        batch_size : int, default=32
+            The batch size for training.
+
+        early_stopping : bool, default=True
+            Whether the model should stop training early if validation
+            loss doesn't drop after n_iter_no_change iterations.
+
+        n_iter_no_change : int, default=10
+            The amount of iterations without validation loss change until
+            the model stops training.
+            (Only matters if early_stopping is True.)
+
+        validation_split : float
+            Should be between 0 and 1.
+            This will determine how the training and validation data are split,
+            with validation_split being the fraction of validation data.
+
+        verbose : int
+            If 0, nothing is printed.
+            If 1, the process of training is printed.
+
+        loss : str or callable or list, default="mse"
+            The loss function used. See Keras for custom ones.
+            If your model has a multi-output layer, you can use a list
+            where the ith loss corresponds to the ith output.
+
+        metrics : list, tuple, dict, or None, default=None
+            The metrics tracked during training.
+
+        optimizer : str, default="adam"
+            The optimizer used in training.
+            See Keras for possibilities.
+
+        learning_rate : float, default=1e-4
+            The learning rate for training.
+
+        random_state : int or None, default=None
+            The random state.
+            Used for reproducible results.
+
+        shuffle : bool, default=True
+            Whether to shuffle the data before training.
+
+        scoring_weights : list or tuple or None, default=None
+            For multi-headed output only.
+            Determines how the average score is weighted.
+            The ith element of this denotes the weighting of the score
+            corresponding to the ith output.
         '''
         self.model_structure = model_structure
         self.build_setting = build_setting
@@ -95,7 +130,10 @@ class SKGraphEstimator(BaseEstimator):
         '''
         Creates the optimizer for the model
 
-        :return (keras.Optimizer): The optimizer object
+        Returns
+        -------
+        Optimizer : keras.Optimizer
+            The optimizer object
         '''
         if isinstance(self.optimizer, str):
             opt = keras.optimizers.get(self.optimizer)
@@ -109,8 +147,26 @@ class SKGraphEstimator(BaseEstimator):
 
     def _validate_hyperparams(self):
         '''
-        Validates the hyperparameters of the model
-        Will raise an error of they are not proper
+        Validates the hyperparameters of the model.
+
+        Will raise an error of they are not proper.
+
+        Raises
+        ------
+        TypeError
+            If model structure is not a list or tuple. 
+
+            If any element in model structure is not a dictionary. 
+        
+        ValueError
+            If model structure is empty. 
+
+            If validation split is not in [0,1). 
+
+            If early stopping is True and validation split <= 0.
+        
+        KeyError
+            If any element in model structure does not have key 'type'.
         '''
         if not isinstance(self.model_structure,(list,tuple)):
             raise TypeError("model_structure must be a list or tuple")
@@ -131,12 +187,28 @@ class SKGraphEstimator(BaseEstimator):
 
     def _project(self,x,target_shape):
         '''
-        Safely projects a given tensor onto a given target shape
+        Safely projects a given tensor onto a given target shape.
 
-        :param x (KerasTensor): The input tensor
-        :param target_shape (tuple): The target shape
+        Parameters
+        ----------
+        x : KerasTensor
+            The input tensor.
 
-        :return (KerasTensor): The tensor after projection
+        target_shape : tuple
+            The shape to be projected to.
+        
+        Returns
+        -------
+        x : keras.KerasTensor
+            The tensor after projection.
+        
+        Raises
+        ------
+        ValueError
+            If the target dimensions are not divisors of the 
+            initial dimensions.
+
+            If the dimension of x is not 2 or 4.
         '''
         shape_len = len(target_shape)
         if shape_len == 2:
@@ -163,10 +235,14 @@ class SKGraphEstimator(BaseEstimator):
 
     def _get_callbacks(self):
         '''
-        Creates and returns a list of callbacks
-        Currently only supports early stopping
+        Creates and returns a list of callbacks. 
 
-        :return (list): A list of callbacks
+        Currently only supports early stopping.
+
+        Returns
+        -------
+        callbacks : list
+            A list of callbacks.
         '''
         callbacks = []
 
@@ -189,15 +265,37 @@ class SKGraphEstimator(BaseEstimator):
 
     def _validate_data(self,X,y=None):
         '''
-        Checks the data to see if it is of the proper format
+        Checks the data to see if it is of the proper format.
 
-        :param X (array-like): The feature array
-        :param y (array-like, default=None): The labels array
-                                             If None, only the features
-                                             will be checked and returned
+        Parameters
+        ----------
+        X : array-like
+            The feature array.
 
-        :return (np.ndarray or tuple of ndarrays): If y was given, returns X and y as an array
-                                                   Else, X will be returned as an array
+        y : array-like or list of array-like, default=None
+            The labels array of shape (n,*output_shape_) for single input 
+            or a list of labels arrays for multi output. 
+
+            If None, only the features will be checked and returned.
+
+        Returns
+        -------
+        X : np.ndarray
+            X as an array.
+        
+        y : np.ndarray
+            y as an array. 
+
+            This is only returned if y is given.
+        
+        Raises
+        ------
+        ValueError
+            If the dimension of the labels is not equal 
+            to the dimension of the output.
+
+            If the dimension of the features is not equal 
+            to the dimension of the input.
         '''
 
         if self.is_multi_output_ and y is not None:
@@ -244,6 +342,9 @@ class SKGraphEstimator(BaseEstimator):
         return np.asarray(X) if y is None else (np.asarray(X), np.asarray(y))
 
     def _check_is_fitted(self):
+        '''
+        Checks if the model was fitted.
+        '''
         check_is_fitted(self, "model_")
 
         
@@ -251,14 +352,40 @@ class SKGraphEstimator(BaseEstimator):
 
     def _add_simple_block(self,layer_type,layer_specs,ind,x):
         '''
-        Adds a layer to the model with the given hyperparameters
+        Adds a layer to the model with the given hyperparameters.
 
-        :param layer_type (str): The layer type. See architecture.md for possibilities
-        :param layer_specs (dict): A dictionary containing the hyperparameters
-        :param ind (int or str): The layer index
-        :param x (KerasTensor): The tensor being passed through the model
+        Parameters
+        ----------
+        layer_type : str
+            The layer type. See architecture.md for possibilities.
+        
+        layer_specs : dict
+            A dictionary specifying the hyperparameters.
+        
+        ind : ind or str
+            The layer index.
+        
+        x : keras.KerasTensor
+            The tensor being passed through the model.
+        
+        Returns
+        -------
+        x : keras.KerasTensor
+            The tensor after the specified layer has been applied.
+        
+        Raises
+        ------
+        KeyError
+            If one of the required hyperparameters is not given 
+            in the layer_specs dictionary.
+        
+        ValueError
+            If the value of any hyperparameter is not proper.
 
-        :return (KerasTensor): The tensor after the specified layer has been applied
+            If the shape of the output of the last layer is 
+            not compatible with the expected input of this layer.
+
+            If layer_type does not match any of the possibilities.
         '''
         if layer_type == "D" or layer_type.lower() == 'dense':
             if not isinstance(layer_specs.get('units'),int):
@@ -352,20 +479,34 @@ class SKGraphEstimator(BaseEstimator):
 
     def _add_resnet_block(self,resnet_structs,ind,final_activation,x,allow_projection=True):
         '''
-        Adds a ResNet block to the model with the given parameters
+        Adds a ResNet block to the model with the given parameters.
         
-        :param resnet_structs (list or tuple): A list of structs of the form:
-                                               [
-                                               {'type':...,'specs':...},
-                                               {'type':...,'specs':...},
-                                               ...
-                                               ]
-        :param ind (int or str): The index of the resnet block
-        :param final_activation (str or callable): The final activation function applied
-                                                   after adding the residual
-        :param x (KerasTensor): The tensor being passed through the model
+        Parameters
+        ----------
+        resnet_structs : list or tuple
+            The layers in the ResNet block. 
+
+            Should be formatted like model_structure.
         
-        :return (KerasTensor): The tensor after the resnet block is applied
+        ind : int or str
+            The index of the resnet block.
+
+        final_activation : str or callable
+            The final activation function applied after adding the residual.
+        
+        x : keras.KerasTensor
+            The tensor being passed through the model.
+        
+        Returns
+        -------
+        x : keras.KerasTensor
+            The tensor after the resnet block is applied.
+        
+        Raises
+        ------
+        ValueError
+            If allow_projection is False and the input and output shape 
+            of the resnet block are not equal.
         '''
         pre_x = x
         out = x
@@ -388,20 +529,44 @@ class SKGraphEstimator(BaseEstimator):
 
     def _add_neural_block(self,layer_specs,ind,x):
         '''
-        Adds a pretrained neural net into the model
-        This is generally for transfer learning
+        Adds a pretrained neural net into the model.
 
-        :param layer_specs (dict): A dictionary of the form
-                                   {'model':...,'freeze':...}
-                                   'model' is a keras.Model object
-                                   'freeze' is a bool determining whether
-                                   to freeze the weights and biases of
-                                   the neural net
-        :param ind (int or str): The index of this layer
-        :param x (KerasTensor): The tensor being passed through the model
+        This is generally for transfer learning.
 
-        :return (KerasTensor): The tensor after being passed through
-                               the given neural net
+        Parameters
+        ----------
+        layer_specs : dict
+            A dictionary of the form
+            ``{'model': ..., 'freeze': ...}``.
+
+            ``model`` is a ``keras.Model`` object.
+
+            ``freeze`` is a bool determining whether to freeze the weights and
+            biases of the neural net.
+
+        ind : int or str
+            The index of this layer.
+
+        x : keras.KerasTensor
+            The tensor being passed through the model.
+
+        Returns
+        -------
+        x : keras.KerasTensor
+            The tensor after being passed through the given neural net.
+        
+        Raises
+        ------
+        KeyError
+            If the model was not given.
+        
+        TypeError
+            If the model given was not a keras.Model 
+            object.
+        
+        ValueError
+            If the output of the last layer does not match
+            the expected input of the model.
         '''
         model_in = layer_specs.get('model')
 
@@ -431,24 +596,49 @@ class SKGraphEstimator(BaseEstimator):
 
     def _add_multioutput_block(self,layer_specs,ind,x):
         '''
-        Adds a multi-output block to the model
-        Must be the output layer
+        Adds a multi-output block to the model.
 
-        :param layer_specs (dict): A dictionary containing only one element with key 'branches'
-                                   The associated value should be a non-empty list or tuple of
-                                   the form:
-                                   [[{'type':...},...],
-                                   [{'type':...},...],
-                                   ...
-                                   ],
-                                   indicating the different branches
-        :param ind (int or str): The index of the multi-output block
-        :param x (KerasTensor): The tensor being passed through the model
+        Must be the output layer.
 
-        :return (list or KerasTensor): If more than one branch was given, a list of outputs
-                                       where the ith element corresponds to the ith branch
-                                       If only one branch was given, the output will
-                                       just be the output of that branch
+        Parameters
+        ----------
+        layer_specs : dict
+            A dictionary containing only one element with key ``'branches'``.
+
+            The associated value should be a non-empty list or tuple of the form::
+
+                [[{'type': ...}, ...],
+                [{'type': ...}, ...],
+                ...]
+
+            indicating the different branches.
+
+        ind : int or str
+            The index of the multi-output block.
+
+        x : keras.KerasTensor
+            The tensor being passed through the model.
+
+        Returns
+        -------
+        [x1,...] or x : list or keras.KerasTensor
+            If more than one branch was given, a list of outputs where the ith
+            element corresponds to the ith branch.
+
+            If only one branch was given, the output will just be the output of
+            that branch.
+        
+        Raises
+        ------
+        KeyError
+            If layer_specs does not have key 'branches'.
+        
+        ValueError
+            If the branches value is not a list or tuple 
+            or the length of it is zero.
+
+            If each of the branches in the branches value is not a list 
+            or tuple oor the length of it is zero.
         '''
         branches = layer_specs.get('branches')
 
@@ -476,22 +666,37 @@ class SKGraphEstimator(BaseEstimator):
 
     def _add_inception_block(self,inception_specs,ind,x):
         '''
-        Adds an inception block to the model with the given parameters
+        Adds an inception block to the model with the given parameters.
 
-        :param inception_specs (dict): A dictionary containing only one element with key 'branches'
-                                       The associated value should be a non-empty list or tuple of
-                                       the form:
-                                       [[{'type':...},
-                                         ...],
-                                        [{'type':...},
-                                         ...],
-                                        ...
-                                       ],
-                                       indicating the different branches
-        :param ind (int or str): The index of the inception block
-        :param x (KerasTensor): The tensor being passed through the model
+        Parameters
+        ----------
+        inception_specs : dict
+            A dictionary containing only one element with key ``'branches'``.
 
-        :return (KerasTensor): The tensor after the inception block is applied
+            The associated value should be a non-empty list or tuple of the form::
+
+                [[{'type': ...}, ...],
+                [{'type': ...}, ...],
+                ...]
+
+            indicating the different branches.
+
+        ind : int or str
+            The index of the inception block.
+
+        x : keras.KerasTensor
+            The tensor being passed through the model.
+
+        Returns
+        -------
+        x : keras.KerasTensor
+            The tensor after the inception block is applied.
+        
+        Raises
+        ------
+        TypeError
+            If the outputs do not have 
+            matching spatial dimensions.
         '''
         outputs = self._add_multioutput_block(inception_specs,ind,x)
 
@@ -509,16 +714,41 @@ class SKGraphEstimator(BaseEstimator):
     
     def _add_xception_block(self,xception_specs,ind,final_activation,x,allow_projection=True):
         '''
-        Adds an xception block to the model with the given parameters
+        Adds an xception block to the model with the given parameters.
 
-        :param xception_specs (list or tuple): A list of the form
-                                               [{'filters':...,},{'filters':...},...]
-        :param ind (int or str): The index of the xception block
-        :param final_activation (str or callable): The final activation function applied
-                                                   after adding the residual
-        :param x (KerasTensor): The tensor being passed through the model
+        Parameters
+        ----------
+        xception_specs : list or tuple
+            A list of the form::
 
-        :return (KerasTensor): The tensor after the xception block is applied
+                [{'filters': ...}, {'filters': ...}, ...]
+
+        ind : int or str
+            The index of the xception block.
+
+        final_activation : str or callable
+            The final activation function applied after adding the residual.
+
+        x : keras.KerasTensor
+            The tensor being passed through the model.
+
+        Returns
+        -------
+        x : keras.KerasTensor
+            The tensor after the xception block is applied.
+        
+        Raises
+        ------
+        ValueError
+            If the input does not have rank 4.
+
+            If the input shape does not match the 
+            output shape and allow_projection = False.
+        
+        KeyError
+            If any of the required hyperparameters 
+            to the separable conv2d layer are not
+            given.
         '''
         xception_specs = xception_specs.get('specs',xception_specs)
         
@@ -555,15 +785,36 @@ class SKGraphEstimator(BaseEstimator):
 
     def _add_regressor_block(self,model,ind,x):
         '''
-        Adds a layer to the model that is the output of a trained sklearn model
-        WARNING: Backpropagation will stop at this layer
+        Adds a layer to the model that is the output of a trained sklearn model.
 
-        :param model (scikit-learn regressor): A fully trained scikit-learn regressor
-                                               (ex. GradientBoostingRegressor)
-        :param ind (int or str): The index of this layer
-        :param x (KerasTensor): The tensor being passed through the model
+        WARNING: Backpropagation will stop at this layer.
 
-        :return (KerasTensor): The tensor after being passed through the regressor
+        Parameters
+        ----------
+        model : scikit-learn regressor
+            A fully trained scikit-learn regressor
+            (ex. GradientBoostingRegressor).
+
+        ind : int or str
+            The index of this layer.
+
+        x : keras.KerasTensor
+            The tensor being passed through the model.
+
+        Returns
+        -------
+        x : keras.KerasTensor
+            The tensor after being passed through the regressor.
+        
+        Raises
+        ------
+        ValueError
+            If the input of the layer does not have shape
+            (n_samples, n_features).
+        
+        RuntimeError
+            If any exception was found while evaluating the 
+            regressor layer.
         '''
         if len(x.shape) != 2:
             raise ValueError("Expected input of model layer to have shape (n_samples, n_features)")
@@ -575,15 +826,31 @@ class SKGraphEstimator(BaseEstimator):
 
     def _add_block(self,struct,ind,x):
         '''
-        Adds a block to the model with the given parameters
-        Will use the previous _block methods
+        Adds a block to the model with the given parameters.
 
-        :param struct (dict): A dictionary of the form {'type':...,'specs':...}
-                              or {'type':...,'hyperparam1':...}
-        :param ind (int or str): The index of the block
-        :param x (KerasTensor): The tensor being passed through the model
+        Will use the previous ``_block`` methods.
 
-        :return (KerasTensor): The tensor after the block is applied
+        Parameters
+        ----------
+        struct : dict
+            A dictionary of the form::
+
+                {'type': ..., 'specs': ...}
+
+            or::
+
+                {'type': ..., 'hyperparam1': ...}
+
+        ind : int or str
+            The index of the block.
+
+        x : keras.KerasTensor
+            The tensor being passed through the model.
+
+        Returns
+        -------
+        x : keras.KerasTensor
+            The tensor after the block is applied.
         '''
         layer_type = struct['type'].replace(" ", "_")
         layer_specs = struct.get('specs',struct)
@@ -616,9 +883,17 @@ class SKGraphEstimator(BaseEstimator):
 
     def build_model(self):
         '''
-        Builds the keras model from the given model structure
+        Builds the keras model from the given model structure.
 
-        :return (keras.Model): The fully built and compiled model
+        Returns
+        -------
+        model : keras.Model
+            The fully built and compiled model.
+        
+        Raises
+        ------
+        ValueError
+            If the multi-output block did not come last.
         '''
         self.is_multi_output_ = False
 
@@ -662,14 +937,30 @@ class SKGraphEstimator(BaseEstimator):
 
     def fit(self, X, y, **fit_params):
         '''
-        Trains the model on the given features and labels
+        Trains the model on the given features and labels.
 
-        :param X (array-like): The features of shape (n_samples, *input_shape_)
-        :param y (array-like or list): The labels of shape (n_samples, *output_shape_) or (n_samples,) for single output
-                                       or list of labels for multi-output
-        :param fit_params: Any additional fit parameters used in Keras
+        Parameters
+        ----------
+        X : array-like
+            The features of shape ``(n_samples, *input_shape_)``.
 
-        :return (self): The trained estimator
+        y : array-like or list
+            The labels of shape ``(n_samples, *output_shape_)`` or
+            ``(n_samples,)`` for single output, or a list of labels for
+            multi-output.
+
+        **fit_params
+            Any additional fit parameters used in Keras.
+
+        Returns
+        -------
+        self
+            The trained estimator.
+        
+        Raises
+        ------
+        ValueError
+            If X is sparse.
         '''
         if issparse(X):
             raise ValueError("Sparse input is not supported")
@@ -736,12 +1027,21 @@ class SKGraphEstimator(BaseEstimator):
 
     def predict(self, X):
         '''
-        Predicts the labels given the features
+        Predicts the labels given the features.
 
-        :param X (array-like): The features of shape (n_samples, *input_shape_)
+        Parameters
+        ----------
+        X : array-like
+            The features of shape ``(n_samples, *input_shape_)``.
 
-        :return (numpy.ndarray or list): The labels of shape (n_samples, *output_shape_) or (n_samples,) for single output
-                                         For multi-output, it is a list of ndarrays with shape (n_samples,*output_shape_) or (n_samples,)
+        Returns
+        -------
+        y or [y1,...] : numpy.ndarray or list
+            The labels of shape ``(n_samples, *output_shape_)`` or
+            ``(n_samples,)`` for single output.
+
+            For multi-output, it is a list of ndarrays with shape
+            ``(n_samples, *output_shape_)`` or ``(n_samples,)``.
         '''
         self._check_is_fitted()
         X = self._validate_data(X)
@@ -761,16 +1061,26 @@ class SKGraphEstimator(BaseEstimator):
 
     def score(self,X,y):
         '''
-        Scores the model based on how it performs on given data
-        - For SKGraphEstimator, this returns the neg mse score
-        - For SKGraphRegressor, this returns the r2 score
-        - For SKGraphClassifier, this returns the accuracy score
+        Scores the model based on how it performs on given data.
 
-        :param X (array-like): The features of shape (n_samples, *input_shape_)
-        :param y (array-like or list): The labels of shape (n_samples, *output_shape_) or (n_samples,) for single output
-                                       or a list of labels for multi-output
+        - For SKGraphEstimator, this returns the neg mse score.
+        - For SKGraphRegressor, this returns the r2 score.
+        - For SKGraphClassifier, this returns the accuracy score.
 
-        :return (float or None): The score or weighted mean of scores (for multi-output)
+        Parameters
+        ----------
+        X : array-like
+            The features of shape ``(n_samples, *input_shape_)``.
+
+        y : array-like or list
+            The labels of shape ``(n_samples, *output_shape_)`` or
+            ``(n_samples,)`` for single output, or a list of labels for
+            multi-output.
+
+        Returns
+        -------
+        score : float or None
+            The score or weighted mean of scores (for multi-output).
         '''
         return compute_score(y,self.predict(X),
                              scoring_func=self.scoring_func,
