@@ -20,12 +20,16 @@ scikit-learn BaseEstimator compatibility
 ```bash
 git clone git@github.com:Simon-Cao909/sk-graph-estimator.git
 cd sk-graph-estimator
-pip install -e .
+pip install .
 ```
 
 ```python
 from sk_graph_estimator.estimator import SKGraphEstimator
 ```
+
+## Documentation
+
+You can find documentation in docs/documentation.md or on https://sk-graph-estimator.readthedocs.io/en/latest/
 
 ## Example code
 ```python
