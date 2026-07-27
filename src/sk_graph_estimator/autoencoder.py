@@ -281,6 +281,9 @@ class SKGraphAutoencoder(SKGraphEstimator):
         ValueError
             If the model type is not 'standard' 
             or 'variational'.
+        
+        NotImplementedError
+            If the multi-output layer is used.
         '''
         self.is_multi_output_ = False
 

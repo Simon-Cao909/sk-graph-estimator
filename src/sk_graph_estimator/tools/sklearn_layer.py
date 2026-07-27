@@ -7,11 +7,15 @@ class SKlearnLayer(keras.layers.Layer):
     Provides support for sklearn models to act as layers in
     a neural network
     '''
+
     def __init__(self, model):
         '''
         Attributes
-        - model (scikit-learn regressor): A fully traiend sklearn model
-                                          (ex. GradientBoostingRegressor)
+        ----------
+        model : scikit-learn regressor
+            A fully trained sklearn model
+
+            Ex. GradientBoostingRegressor
         '''
         super().__init__()
         self.model = model
@@ -20,9 +24,15 @@ class SKlearnLayer(keras.layers.Layer):
         '''
         This method decides how an input is passed through the layer
 
-        :param inputs (KerasTensor): The input tensor
+        Parameters
+        ----------
+        inputs : keras.KerasTensor
+            The input tensor
         
-        :return (KerasTensor): The tensor after the sklearn model is applied
+        Returns
+        -------
+        keras.KerasTensor
+            The tensor after the sklearn model is applied
         '''
         def regressor_pred(x):
             pred = self.model.predict(x)

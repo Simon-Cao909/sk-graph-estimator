@@ -1,15 +1,26 @@
 def safe_get(lt,ind,fallback=None):
     '''
-    Safely gets an element from a list
+    Safely gets an element from a list.
+
     If the index is out of the max index,
-    the fallback will be returned
+    the fallback will be returned.
 
-    :param lt (list): The list to get the element from
-    :ind (int): The index of the element
-    :param fallback (anything, default=None): The fallback
-
-    :returns (anything): The element of the list at that index
-                         or the fallback if the index is out of range
+    Parameters
+    ----------
+    lt : list
+        The list to get the element from.
+    
+    ind : int
+        The index of the element.
+    
+    fallback : anything
+        The fallback if the index is not valid.
+    
+    Returns
+    -------
+    Anything
+        The element of the list at that index 
+        or the fallback if the index is out of range.
     '''
     if -len(lt) < ind < len(lt):
         return lt[ind]
@@ -20,10 +31,17 @@ def parse_quick(structs):
     '''
     Parses model_structure when build_setting = 'quick'
 
-    :param structs (list): A list of lists describing the model structure
+    Parameters
+    ----------
+    structs : list
+        A list of lists describing the model structure
+    
+    Returns
+    -------
+    dict
+        A model_structure dictionary after parsing.
 
-    :return (dict): A model_structure dictionary after parsing
-                    It is of the form when build_setting = 'normal'
+        It is of the form when build_setting = 'normal'
     '''
     new_structure = []
 

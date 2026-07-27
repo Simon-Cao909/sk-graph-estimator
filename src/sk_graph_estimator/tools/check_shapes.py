@@ -2,11 +2,20 @@ def shapes_equal(a, b):
     '''
     Checks if the shapes of two arrays are equal
 
-    :param a (array-like): The first array
-    :param b (array-like): The second array
-
-    :returns (bool): True if the shapes are equal
-                     False otherwise
+    Parameters
+    ----------
+    a : array-like
+        The first array
+    
+    b : array-like
+        The second array
+    
+    Returns
+    -------
+    bool
+        True if the shapes are equal
+        
+        False otherwise
     '''
     if len(a) != len(b):
         return False
