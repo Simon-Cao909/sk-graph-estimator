@@ -139,7 +139,10 @@ def parse_quick(structs):
             model = safe_get(struct,1)
             freeze = safe_get(struct,2,False)
             new_structure.append({'type':layer_type,'model':model,'freeze':freeze})
-        
+        elif layer_type == 'multi-input':
+            branches = [parse_quick(branch) for branch in safe_get(struct,1)]
+            merge_layer = safe_get(struct,2)
+            new_structure.append({'type':layer_type,'branches':branches,'merge_layer':merge_layer})
         else:
             new_structure.append({'type':layer_type})
     

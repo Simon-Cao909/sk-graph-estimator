@@ -9,6 +9,7 @@ from .tools.sklearn_layer import SKlearnLayer
 from .tools.check_shapes import shapes_equal
 from .tools.quick_build_parser import parse_quick
 from .tools.score import compute_score, neg_mse_score
+from .tools.validation import validate_branches
 
 class SKGraphEstimator(BaseEstimator):
     '''
@@ -39,19 +40,28 @@ class SKGraphEstimator(BaseEstimator):
         scoring_weights=None,
     ):
         '''
-        Attributes
+        Parameters
         ----------
         model_structure : list or tuple
             Specifies the model architecture.
-            See architecture.md for how to format this.
+
+            See ``architecture.md`` for how to format this.
 
         build_setting : str, default="normal"
             Decides the format of model_structure.
-            Must be either 'normal' or 'quick'.
-            See architecture.md for more information.
 
-        input_shape : tuple, default=None
+            Must be either 'normal' or 'quick'.
+
+            See ``architecture.md`` for more information.
+
+        input_shape : tuple, list, or None, default=None
             The input shape.
+
+            For single input, use a tuple specifying the input shape.
+
+            For multi-input, use a list of tuples, where the ith tuple 
+            denotes the input shape of the ith branch.
+
             If None, it will be guessed from the feature shape.
 
         epochs : int, default=100
@@ -67,19 +77,23 @@ class SKGraphEstimator(BaseEstimator):
         n_iter_no_change : int, default=10
             The amount of iterations without validation loss change until
             the model stops training.
+
             (Only matters if early_stopping is True.)
 
         validation_split : float
             Should be between 0 and 1.
+
             This will determine how the training and validation data are split,
             with validation_split being the fraction of validation data.
 
         verbose : int
             If 0, nothing is printed.
+
             If 1, the process of training is printed.
 
         loss : str or callable or list, default="mse"
             The loss function used. See Keras for custom ones.
+
             If your model has a multi-output layer, you can use a list
             where the ith loss corresponds to the ith output.
 
@@ -88,6 +102,7 @@ class SKGraphEstimator(BaseEstimator):
 
         optimizer : str, default="adam"
             The optimizer used in training.
+
             See Keras for possibilities.
 
         learning_rate : float, default=1e-4
@@ -95,6 +110,7 @@ class SKGraphEstimator(BaseEstimator):
 
         random_state : int or None, default=None
             The random state.
+
             Used for reproducible results.
 
         shuffle : bool, default=True
@@ -102,7 +118,9 @@ class SKGraphEstimator(BaseEstimator):
 
         scoring_weights : list or tuple or None, default=None
             For multi-headed output only.
+
             Determines how the average score is weighted.
+
             The ith element of this denotes the weighting of the score
             corresponding to the ith output.
         '''
@@ -270,21 +288,24 @@ class SKGraphEstimator(BaseEstimator):
         Parameters
         ----------
         X : array-like
-            The feature array.
+            The feature array of shape ``(n,*input_shape_)`` for single input 
+            or a list of features for multi-input.
 
         y : array-like or list of array-like, default=None
-            The labels array of shape (n,*output_shape_) for single input 
-            or a list of labels arrays for multi output. 
+            The labels array of shape ``(n,*output_shape_)`` for single input 
+            or a list of labels arrays for multi-output. 
 
             If None, only the features will be checked and returned.
 
         Returns
         -------
         X : np.ndarray
-            X as an array.
+            X as an array for single input or 
+            a list of arrays for multi-input
         
         y : np.ndarray
-            y as an array. 
+            y as an array for single output or 
+            a list of arrays for multi-output
 
             This is only returned if y is given.
         
@@ -296,21 +317,67 @@ class SKGraphEstimator(BaseEstimator):
 
             If the dimension of the features is not equal 
             to the dimension of the input.
+
+            For multi-output, if the number of outputs is not 
+            equal to the amount of labels
+
+            For multi-input, if the number of inputs is not 
+            equal to the number of features
+
+            For multi-input or output, if the number of samples 
+            is not equal between arrays
         '''
+        if self.is_multi_input_:
+            X = [np.asarray(x) for x in X]
 
         if self.is_multi_output_ and y is not None:
-            if len(y) != len(self.output_shape_):
-                raise ValueError(
-                    f"Expected {len(self.output_shape_)} outputs, "
-                    f"got {len(y)} outputs instead"
-                )
-            
-            for i,(target,expec_shape) in enumerate(zip(y,self.output_shape_)):
-                if target.shape[1:] != expec_shape:
+            y = [np.asarray(target) for target in y]
+
+        if self.is_multi_input_ or self.is_multi_output_:
+            if self.is_multi_output_ and y is not None:
+                if len(y) != len(self.output_shape_):
                     raise ValueError(
-                        f"For output {i}: expected shape {expec_shape}, "
-                        f"got {target.shape[1:]} instead"
+                        f"Expected {len(self.output_shape_)} outputs, "
+                        f"got {len(y)} outputs instead"
                     )
+                
+                for i,(target,expec_shape) in enumerate(zip(y,self.output_shape_)):
+                    if target.shape[1:] != expec_shape:
+                        raise ValueError(
+                            f"For output {i}: expected shape {expec_shape}, "
+                            f"got {target.shape[1:]} instead"
+                        )
+
+                n_samples = y[0].shape[0]
+                for ind,target in enumerate(y):
+                    if target.shape[0] != n_samples:
+                        raise ValueError(
+                            f"The number of samples for label {ind+1}: {target.shape[0]}\n"
+                            f"The number of samples for label 1: {n_samples}"
+                        )
+
+            if self.is_multi_input_:
+                if len(X) != len(self.input_shape_):
+                    raise ValueError(
+                        f"Expected {len(self.input_shape_)} inputs, "
+                        f"got {len(X)} inputs instead"
+                    )
+
+                for i,(inp,expec_shape) in enumerate(zip(X,self.input_shape_)):
+                    if inp.shape[1:] != expec_shape:
+                        raise ValueError(
+                            f"For input {i}: expected shape {expec_shape}, "
+                            f"got {inp.shape[1:]} instead"
+                        )
+
+                n_samples = X[0].shape[0]
+                for ind,x in enumerate(X):
+                    if x.shape[0] != n_samples:
+                        raise ValueError(
+                            f"The number of samples for feature {ind+1}: {x.shape[0]}\n"
+                            f"The number of samples for feature 1: {n_samples}"
+                        )
+                    
         elif len(self.output_shape_) <= 1 and len(self.input_shape_) <= 1:
             if y is None:
                 X = check_array(X, accept_sparse=False, dtype=np.float32)
@@ -325,29 +392,45 @@ class SKGraphEstimator(BaseEstimator):
                     dtype=np.float32,
                 )
         
-        if X.shape[1:] != self.input_shape_:
-            raise ValueError(
-                f"The features have {X.shape[1:]} shape, but this model was fitted with "
-                f"{self.input_shape_} input shape."
-            )
-        
         if y is not None and not self.is_multi_output_ and self.output_shape_ != y.shape[1:]:
             raise ValueError(
                 f"output_shape={self.output_shape_}, but y has shape {y.shape[1:]}"
             )
-        
-        if self.is_multi_output_:
-            return np.asarray(X) if y is None else (np.asarray(X),y)
-        
-        return np.asarray(X) if y is None else (np.asarray(X), np.asarray(y))
 
+        if not self.is_multi_input_ and self.input_shape_ != X.shape[1:]:
+            raise ValueError(
+                f"input_shape={self.input_shape_}, but X has shape {X.shape[1:]}"
+            )
+
+        return X if y is None else (X,y)
+    
     def _check_is_fitted(self):
         '''
         Checks if the model was fitted.
         '''
         check_is_fitted(self, "model_")
 
-        
+    def _prepare_structure(self):
+        '''
+        Prepares ``model_structure`` for model construction
+
+        Returns
+        -------
+        structs : list
+            The parsed model structure
+        '''
+        self._validate_hyperparams()
+
+        structs = self.model_structure
+
+        if self.build_setting == 'quick':
+            structs = parse_quick(structs)
+
+        self.is_multi_input_ = structs[0]['type'].lower() == "multi-input"
+
+        return structs
+
+
     ### ADDING BLOCKS ###
 
     def _add_simple_block(self,layer_type,layer_specs,ind,x):
@@ -357,7 +440,7 @@ class SKGraphEstimator(BaseEstimator):
         Parameters
         ----------
         layer_type : str
-            The layer type. See architecture.md for possibilities.
+            The layer type. See ``architecture.md`` for possibilities.
         
         layer_specs : dict
             A dictionary specifying the hyperparameters.
@@ -486,7 +569,7 @@ class SKGraphEstimator(BaseEstimator):
         resnet_structs : list or tuple
             The layers in the ResNet block. 
 
-            Should be formatted like model_structure.
+            Should be formatted like ``model_structure``.
         
         ind : int or str
             The index of the resnet block.
@@ -598,7 +681,7 @@ class SKGraphEstimator(BaseEstimator):
         '''
         Adds a multi-output block to the model.
 
-        Must be the output layer.
+        Must be the output layer if added.
 
         Parameters
         ----------
@@ -638,20 +721,13 @@ class SKGraphEstimator(BaseEstimator):
             or the length of it is zero.
 
             If each of the branches in the branches value is not a list 
-            or tuple oor the length of it is zero.
+            or tuple or the length of it is zero.
         '''
         branches = layer_specs.get('branches')
-
-        if branches is None:
-            raise KeyError(f"Block {ind} must have branches")
-        if not isinstance(branches,(list,tuple)) or len(branches) == 0:
-            raise ValueError(f"Block {ind}: branches must be a non-empty list or tuple")
+        validate_branches(branches,ind)
         
         outputs = []
         for branch_ind, branch in enumerate(branches):
-            if not isinstance(branch, (list,tuple)) or len(branch) == 0:
-                raise ValueError(f"Block {ind}, branch index {branch_ind}: "
-                                 "each branch must be a non-empty list or tuple of layer specs")
             
             out = x
             for sub_ind, struct in enumerate(branch):
@@ -663,6 +739,51 @@ class SKGraphEstimator(BaseEstimator):
             outputs = outputs[0]
         
         return outputs
+
+    def _add_multiinput_block(self,layer_specs,ind):
+        '''
+        Adds a multi-input block to the model.
+
+        Must be the first layer if added.
+
+        Parameters
+        ----------
+        layer_specs : dict
+            A dictionary containing the keys ``'branches'`` and ``'merge_layer'``.
+
+            The associated value of ``'branches'`` should be a non-empty list or tuple of the form::
+
+                [[{'type': ...}, ...],
+                [{'type': ...}, ...],
+                ...]
+            
+            indicating the different branches.
+
+            The associated value of ``'merge_layer'`` should be a keras.layers.Layer object that 
+            controls how to merge the outputs of the branches.
+        '''
+        branches = layer_specs.get('branches')
+        validate_branches(branches,ind)
+
+        inputs = []
+        outputs = []
+        
+        for branch_ind, branch in enumerate(branches):
+            inp = kl.Input(shape=(
+                                  self.input_shape_
+                                  if not isinstance(self.input_shape_,list)
+                                  else self.input_shape_[branch_ind]
+                                )
+                            )
+            inputs.append(inp)
+
+            out = inp
+            for sub_ind, struct in enumerate(branch[1:]):
+                out = self._add_block(struct,f"{ind}.{branch_ind}.{sub_ind}",out)
+            
+            outputs.append(out)
+
+        return inputs, layer_specs.get('merge_layer')(outputs)
 
     def _add_inception_block(self,inception_specs,ind,x):
         '''
@@ -697,6 +818,16 @@ class SKGraphEstimator(BaseEstimator):
         TypeError
             If the outputs do not have 
             matching spatial dimensions.
+        
+        KeyError
+            If layer_specs does not have key 'branches'.
+        
+        ValueError
+            If the branches value is not a list or tuple 
+            or the length of it is zero.
+
+            If each of the branches in the branches value is not a list 
+            or tuple or the length of it is zero.
         '''
         outputs = self._add_multioutput_block(inception_specs,ind,x)
 
@@ -837,7 +968,7 @@ class SKGraphEstimator(BaseEstimator):
 
                 {'type': ..., 'specs': ...}
 
-            or::
+            or:
 
                 {'type': ..., 'hyperparam1': ...}
 
@@ -878,13 +1009,15 @@ class SKGraphEstimator(BaseEstimator):
         else:
             return self._add_simple_block(layer_type,layer_specs,ind,x)
 
-
-    ### SKLEARN METHODS ###
-
-    def build_model(self):
+    def _build_model(self,structs):
         '''
         Builds the keras model from the given model structure.
 
+        Parameters
+        ----------
+        structs : list or tuple
+            A parsed ``model_structure``.
+        
         Returns
         -------
         model : keras.Model
@@ -893,24 +1026,28 @@ class SKGraphEstimator(BaseEstimator):
         Raises
         ------
         ValueError
+            If the multi-input block did not come first.
+
             If the multi-output block did not come last.
         '''
         self.is_multi_output_ = False
 
-        input_shape = self.input_shape_
+        if structs[0]['type'] == 'multi-input':
+            struct = structs[0]
+            structs = structs[1:]
 
-        inputs = kl.Input(shape=input_shape)
+            self.is_multi_input_ = True
+            inputs,x = self._add_multiinput_block(struct.get('specs',struct),0)
+        else:
+            input_shape = self.input_shape_
+            inputs = kl.Input(shape=input_shape)
 
-        x = inputs
-
-        self._validate_hyperparams()
-
-        structs = self.model_structure
-
-        if self.build_setting == "quick":
-            structs = parse_quick(structs)
+            x = inputs
 
         for ind,struct in enumerate(structs):
+            if struct['type'] == 'multi-input':
+                raise ValueError("Multi-input block must come first")
+
             if ind == len(structs) - 1:
                 outputs = self._add_block(struct,ind,x)
             else:
@@ -935,6 +1072,9 @@ class SKGraphEstimator(BaseEstimator):
 
         return model
 
+
+    ### SKLEARN METHODS ###
+
     def fit(self, X, y, **fit_params):
         '''
         Trains the model on the given features and labels.
@@ -942,7 +1082,8 @@ class SKGraphEstimator(BaseEstimator):
         Parameters
         ----------
         X : array-like
-            The features of shape ``(n_samples, *input_shape_)``.
+            The features of shape ``(n_samples, *input_shape_)`` 
+            for single input or a list of features for multi-input
 
         y : array-like or list
             The labels of shape ``(n_samples, *output_shape_)`` or
@@ -964,17 +1105,22 @@ class SKGraphEstimator(BaseEstimator):
         '''
         if issparse(X):
             raise ValueError("Sparse input is not supported")
-        
-        X = np.asarray(X)
 
         if self.random_state is not None:
             keras.utils.set_random_seed(self.random_state)
 
-        self.input_shape_ = self.input_shape if self.input_shape is not None else X.shape[1:]
+        structs = self._prepare_structure()
 
-        # Checks to see if the shapes are correct
+        if self.is_multi_input_:
+            X = [np.asarray(x) for x in X]
+            expec_inp = [x.shape[1:] for x in X]
+        else:
+            X = np.asarray(X)
+            expec_inp = X.shape[1:]
+
+        self.input_shape_ = self.input_shape if self.input_shape is not None else expec_inp
         
-        self.model_ = self.build_model()
+        self.model_ = self._build_model(structs)
 
         # If y is of shape (n_samples,), we need it to be of shape (n_samples,1)
         if self.is_multi_output_:
@@ -1032,7 +1178,9 @@ class SKGraphEstimator(BaseEstimator):
         Parameters
         ----------
         X : array-like
-            The features of shape ``(n_samples, *input_shape_)``.
+            The features of shape ``(n_samples, *input_shape_)`` for single input.
+
+            A list of features of shape ``(n_samples, *input_shape_[i])`` for multi-input.
 
         Returns
         -------
@@ -1041,7 +1189,7 @@ class SKGraphEstimator(BaseEstimator):
             ``(n_samples,)`` for single output.
 
             For multi-output, it is a list of ndarrays with shape
-            ``(n_samples, *output_shape_)`` or ``(n_samples,)``.
+            ``(n_samples, *output_shape_[i])`` or ``(n_samples,)``.
         '''
         self._check_is_fitted()
         X = self._validate_data(X)
@@ -1070,7 +1218,9 @@ class SKGraphEstimator(BaseEstimator):
         Parameters
         ----------
         X : array-like
-            The features of shape ``(n_samples, *input_shape_)``.
+            The features of shape ``(n_samples, *input_shape_)`` for single input.
+
+            A list of features of shape ``(n_samples, *input_shape_[i])`` for multi-input.
 
         y : array-like or list
             The labels of shape ``(n_samples, *output_shape_)`` or

@@ -5,8 +5,9 @@ from .estimator import SKGraphEstimator
 
 class SKGraphClassifier(SKGraphEstimator, ClassifierMixin):
     '''
-    SKGraphRegressor is the classifier branch of SKGraphEstimator
-    The only thing different is that it now supports .score()
+    SKGraphRegressor is the classifier branch of SKGraphEstimator.
+
+    The only thing different is the functionality of .score().
     '''
     scoring_func = accuracy_score
     must_be_vector = True

@@ -4,8 +4,8 @@ import numpy as np
 
 from .estimator import SKGraphEstimator
 from .tools.quick_build_parser import parse_quick
-from .tools.sae import SAE
-from .tools.vae import VAE, sampling
+from .tools.autoencoder_base.sae import SAE
+from .tools.autoencoder_base.vae import VAE, sampling
 from .tools.score import compute_score, neg_mse_score
 
 class SKGraphAutoencoder(SKGraphEstimator):
@@ -36,7 +36,7 @@ class SKGraphAutoencoder(SKGraphEstimator):
         shuffle=True,
     ):
         '''
-        Attributes
+        Parameters
         ----------
         encoder_structure : list or tuple
             Model structure for the encoder.
@@ -263,10 +263,7 @@ class SKGraphAutoencoder(SKGraphEstimator):
         
         return output[0] if one_sample else output
 
-
-    ### SKLEARN METHODS ###
-
-    def build_model(self):
+    def _build_model(self):
         '''
         Builds and compiles the autoencoder using the given
         encoder_structure and decoder_structure.
@@ -305,6 +302,9 @@ class SKGraphAutoencoder(SKGraphEstimator):
         model.compile(optimizer=self._make_optimizer())
 
         return model
+
+
+    ### SKLEARN METHODS ###
     
     def fit(self, X, y = None, **fit_params):
         '''
@@ -331,6 +331,8 @@ class SKGraphAutoencoder(SKGraphEstimator):
         ValueError
             If the input and output shape are not the same.
         '''
+        self.is_multi_input_ = False
+        
         X = np.asarray(X)
 
         if self.random_state is not None:
@@ -338,7 +340,7 @@ class SKGraphAutoencoder(SKGraphEstimator):
 
         self.input_shape_ = self.input_shape if self.input_shape is not None else X.shape[1:]
         
-        self.model_ = self.build_model()
+        self.model_ = self._build_model()
 
         X = self._validate_data(X)
 

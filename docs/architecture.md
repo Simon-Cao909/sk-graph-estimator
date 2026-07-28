@@ -25,6 +25,7 @@ More advanced types:
 - 'regressor'
 - 'NN' or 'neural'
 - 'multi-output'
+- 'multi-input'
 
 ## For simple layers:
 Then, this dictionary can either have a 'specs' key, or the hyperparameters can be put directly as keys. If a 'specs' key is used, the associated value should be a dictionary containing the hyperparameters as keys:
@@ -202,6 +203,10 @@ The names of the keys are the names of the hyperparameters used by Keras (req is
     - This must be the last layer
     - The structure of this is the same as inception, but now the outputs will simply be returned instead of concatenated
     - The ith branch will be the ith output
+- For 'multi-input':
+    - This must be the first layer
+    - The structure of this is the same as inception, but now you need an extra key 'merge_layer' with value of type keras.layers.Layer. This should take as argument a list of length n_branches and merge the branches together how you see fit (ex. add them)
+    - You do not need to add a custom input layer. You can start immediately by writing standard layers
 * Note: model_structure is recursive. This means you can nest ResNet blocks, Inception blocks, and Xception blocks easily
 
 
@@ -416,6 +421,7 @@ For advanced layers and blocks
 - For 'regressor': [layer_type,model]
 - For 'NN': [layer_type,model,freeze]
 - For 'multi-output': exact same as 'I' [layer_type,branches]
+- For 'multi-input': [layer_type,branches,merge_layer]
 
 Note that you can still use all aliases for layer_type
 
