@@ -6,9 +6,6 @@ from tensorflow import keras
 x_train = x_train.astype('float32').reshape(x_train.shape[0],28,28,1) / 255
 x_test = x_test.astype('float32').reshape(x_test.shape[0],28,28,1) / 255
 
-y_train = keras.utils.to_categorical(y_train,10)
-y_test = keras.utils.to_categorical(y_test,10)
-
 model = SKGraphClassifier(model_structure = [
                                                 {'type':'C', 'filters':8, 'kernel_size':(3,3), 'activation':'relu', 'padding':'same'},
                                                 {'type':'MP'},
@@ -28,7 +25,7 @@ model = SKGraphClassifier(model_structure = [
                                                 {'type':'D', 'units':32, 'activation':'relu'},
                                                 {'type':'D', 'units':10, 'activation':'softmax'}
                                             ],
-                          epochs = 20,
+                          epochs = 3,
                           learning_rate = 1e-3,
                           loss = 'categorical_crossentropy',
                           optimizer = 'adam',

@@ -9,9 +9,6 @@ xte_shape = x_test.shape
 x_train = x_train.reshape(xtr_shape[0],xtr_shape[1]*xtr_shape[2])
 x_test = x_test.reshape(xte_shape[0],xte_shape[1]*xte_shape[2])
 
-y_train = keras.utils.to_categorical(y_train,10)
-y_test = keras.utils.to_categorical(y_test,10)
-
 model = SKGraphClassifier(model_structure = [
                                                 {'type':'D', 'units':64, 'activation':'relu'},
                                                 {'type':'d', 'rate':0.1},

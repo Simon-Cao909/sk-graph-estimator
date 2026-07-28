@@ -281,6 +281,29 @@ class SKGraphEstimator(BaseEstimator):
         
         return callbacks
 
+    def _format_data(self,X,y=None):
+        '''
+        Returns
+        -------
+        X : np.ndarray or list of np.ndarray
+            X as an array for single input or 
+            a list of arrays for multi-input
+        
+        y : np.ndarray or list of np.ndarray
+            y as an array for single output or 
+            a list of arrays for multi-output
+
+            This is only returned if y is given.
+        '''
+        X = [np.asarray(x) for x in X] \
+            if self.is_multi_input_ else np.asarray(X)
+
+        if y is not None:
+            y = [np.asarray(target) for target in y] \
+                if self.is_multi_output_ else np.asarray(y)
+
+        return X if y is None else (X,y)
+    
     def _validate_data(self,X,y=None):
         '''
         Checks the data to see if it is of the proper format.
@@ -296,19 +319,15 @@ class SKGraphEstimator(BaseEstimator):
             or a list of labels arrays for multi-output. 
 
             If None, only the features will be checked and returned.
-
+        
         Returns
         -------
-        X : np.ndarray
-            X as an array for single input or 
-            a list of arrays for multi-input
+        X : np.ndarray or list of np.ndarray
+            X formatted by sklearn's validate_data if single input
         
-        y : np.ndarray
-            y as an array for single output or 
-            a list of arrays for multi-output
+        y : np.ndarray or list of np.ndarray
+            y formatted by sklearn's validate_data if single output
 
-            This is only returned if y is given.
-        
         Raises
         ------
         ValueError
@@ -327,12 +346,6 @@ class SKGraphEstimator(BaseEstimator):
             For multi-input or output, if the number of samples 
             is not equal between arrays
         '''
-        if self.is_multi_input_:
-            X = [np.asarray(x) for x in X]
-
-        if self.is_multi_output_ and y is not None:
-            y = [np.asarray(target) for target in y]
-
         if self.is_multi_input_ or self.is_multi_output_:
             if self.is_multi_output_ and y is not None:
                 if len(y) != len(self.output_shape_):
@@ -1086,9 +1099,16 @@ class SKGraphEstimator(BaseEstimator):
             for single input or a list of features for multi-input
 
         y : array-like or list
+            For non classification:
+
             The labels of shape ``(n_samples, *output_shape_)`` or
             ``(n_samples,)`` for single output, or a list of labels for
             multi-output.
+
+            For classification:
+
+            The class labels of shape ``(n_samples,)`` or a list of 
+            class labels for multi-output.
 
         **fit_params
             Any additional fit parameters used in Keras.
@@ -1121,6 +1141,8 @@ class SKGraphEstimator(BaseEstimator):
         self.input_shape_ = self.input_shape if self.input_shape is not None else expec_inp
         
         self.model_ = self._build_model(structs)
+
+        X,y = self._format_data(X,y)
 
         # If y is of shape (n_samples,), we need it to be of shape (n_samples,1)
         if self.is_multi_output_:
@@ -1190,8 +1212,21 @@ class SKGraphEstimator(BaseEstimator):
 
             For multi-output, it is a list of ndarrays with shape
             ``(n_samples, *output_shape_[i])`` or ``(n_samples,)``.
+        
+        Raises
+        ------
+        ValueError
+            If the dimension of the features is not equal 
+            to the dimension of the input.
+
+            For multi-input, if the number of inputs is not 
+            equal to the number of features
+
+            For multi-input, if the number of samples is not 
+            equal between arrays
         '''
         self._check_is_fitted()
+        X = self._format_data(X)
         X = self._validate_data(X)
 
         pred = self.model_.predict(X, verbose=0)
@@ -1223,9 +1258,16 @@ class SKGraphEstimator(BaseEstimator):
             A list of features of shape ``(n_samples, *input_shape_[i])`` for multi-input.
 
         y : array-like or list
+            For non classification:
+        
             The labels of shape ``(n_samples, *output_shape_)`` or
             ``(n_samples,)`` for single output, or a list of labels for
             multi-output.
+
+            For classification:
+
+            The class labels of shape ``(n_samples,)`` or a list of 
+            labels for multi-output
 
         Returns
         -------
