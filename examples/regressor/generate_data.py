@@ -25,3 +25,17 @@ def get_multi_output_data():
     y2 += rng.normal(0, 0.2, size=n)
 
     return X,y1,y2
+
+def get_multi_input_data():
+    rng = np.random.default_rng(42)
+
+    n = 5000
+
+    X1 = rng.uniform(-3, 3, size=(n, 4))
+    X2 = rng.uniform(-1, 1, size=(n, 5))
+
+    y = np.sin(X1[:,0]) + X2[:,1]**2 - 0.5*X1[:,2]*X2[:,3] + 0.3*np.cos(2*X1[:,3])
+
+    y += rng.normal(0, 0.2, size=n)
+
+    return X1,X2,y

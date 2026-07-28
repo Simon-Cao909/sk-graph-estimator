@@ -17,7 +17,7 @@ class SKGraphEstimator(BaseEstimator):
     features of scikit-learn regressors and the versatility of Tensorflow with Keras
     '''
 
-    scoring_func = neg_mse_score
+    scoring_func = staticmethod(neg_mse_score)
     must_be_vector = False
     
     def __init__(
@@ -778,7 +778,7 @@ class SKGraphEstimator(BaseEstimator):
             inputs.append(inp)
 
             out = inp
-            for sub_ind, struct in enumerate(branch[1:]):
+            for sub_ind, struct in enumerate(branch):
                 out = self._add_block(struct,f"{ind}.{branch_ind}.{sub_ind}",out)
             
             outputs.append(out)

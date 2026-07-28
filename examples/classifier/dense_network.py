@@ -13,15 +13,13 @@ y_train = keras.utils.to_categorical(y_train,10)
 y_test = keras.utils.to_categorical(y_test,10)
 
 model = SKGraphClassifier(model_structure = [
-                                                {'type':'D', 'units':128, 'activation':'relu'},
-                                                {'type':'d', 'rate':0.1},
                                                 {'type':'D', 'units':64, 'activation':'relu'},
                                                 {'type':'d', 'rate':0.1},
                                                 {'type':'D', 'units':64, 'activation':'relu'},
                                                 {'type':'d', 'rate':0.1},
                                                 {'type':'D', 'units':10, 'activation':'softmax'}
                                             ],
-                          epochs = 20,
+                          epochs = 5,
                           learning_rate = 1e-3,
                           loss = 'categorical_crossentropy',
                           optimizer = 'adam',

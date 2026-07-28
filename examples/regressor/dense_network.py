@@ -15,7 +15,7 @@ model = SKGraphRegressor(model_structure=[
         ['D',1,'linear']
     ],
     build_setting="quick",
-    epochs=20,
+    epochs=5,
     batch_size=64,
     learning_rate=1e-3,
     random_state=42

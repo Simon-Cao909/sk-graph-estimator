@@ -9,5 +9,5 @@ class SKGraphClassifier(SKGraphEstimator, ClassifierMixin):
 
     The only thing different is the functionality of .score().
     '''
-    scoring_func = accuracy_score
+    scoring_func = staticmethod(accuracy_score)
     must_be_vector = True

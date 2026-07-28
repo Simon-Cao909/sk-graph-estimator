@@ -9,5 +9,5 @@ class SKGraphRegressor(SKGraphEstimator, RegressorMixin):
 
     The only thing different is the functionality of .score().
     '''
-    scoring_func = r2_score
+    scoring_func = staticmethod(r2_score)
     must_be_vector = True

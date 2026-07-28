@@ -14,7 +14,7 @@ class SKGraphAutoencoder(SKGraphEstimator):
     create standard and variational autoencoders
     '''
 
-    scoring_func = neg_mse_score
+    scoring_func = staticmethod(neg_mse_score)
     must_be_vector = False
 
     def __init__(
