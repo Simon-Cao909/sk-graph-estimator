@@ -299,7 +299,6 @@ class SKGraphAutoencoder(SKGraphEstimator):
                              "'standard' or 'variational'")
         
         model = AutoEncoder(self.encoder_,self.decoder_)
-        model.compile(optimizer=self._make_optimizer())
 
         return model
 
@@ -332,6 +331,7 @@ class SKGraphAutoencoder(SKGraphEstimator):
             If the input and output shape are not the same.
         '''
         self.is_multi_input_ = False
+        self.y_was_1d_ = False
         
         X = np.asarray(X)
 
@@ -341,6 +341,7 @@ class SKGraphAutoencoder(SKGraphEstimator):
         self.input_shape_ = self.input_shape if self.input_shape is not None else X.shape[1:]
         
         self.model_ = self._build_model()
+        self.model_.compile(optimizer=self._make_optimizer())
 
         X = self._validate_data(X)
 

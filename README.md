@@ -29,7 +29,7 @@ from sk_graph_estimator.estimator import SKGraphEstimator
 
 ## Documentation
 
-You can find documentation in docs/documentation.md or on https://sk-graph-estimator.readthedocs.io/en/latest/
+You can find documentation on https://sk-graph-estimator.readthedocs.io/en/latest/
 
 ## Example code
 ```python

@@ -27,7 +27,7 @@ model = SKGraphAutoencoder(encoder_structure=[
                                     {'type':'CT','filters':1,'kernel_size':(3,3),'activation':'sigmoid','padding':'same'},
                             ],
                             model_type='standard', # or variational
-                            epochs=20,
+                            epochs=3,
                             batch_size=128,
                             verbose=1,
                             optimizer='adam',

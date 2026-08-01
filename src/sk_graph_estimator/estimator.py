@@ -10,6 +10,7 @@ from .tools.check_shapes import shapes_equal
 from .tools.quick_build_parser import parse_quick
 from .tools.score import compute_score, neg_mse_score
 from .tools.validation import validate_branches
+from .tools.unet_layers import Conv3Layer, UnetDownLayer, UnetUpLayer, UnetBottleneck
 
 class SKGraphEstimator(BaseEstimator):
     '''
@@ -483,7 +484,7 @@ class SKGraphEstimator(BaseEstimator):
 
             If layer_type does not match any of the possibilities.
         '''
-        if layer_type == "D" or layer_type.lower() == 'dense':
+        if layer_type == 'D' or layer_type.lower() == 'dense':
             if not isinstance(layer_specs.get('units'),int):
                 if isinstance(layer_specs.get('neurons'),int):
                     num_neurons = layer_specs['neurons']
@@ -753,51 +754,6 @@ class SKGraphEstimator(BaseEstimator):
         
         return outputs
 
-    def _add_multiinput_block(self,layer_specs,ind):
-        '''
-        Adds a multi-input block to the model.
-
-        Must be the first layer if added.
-
-        Parameters
-        ----------
-        layer_specs : dict
-            A dictionary containing the keys ``'branches'`` and ``'merge_layer'``.
-
-            The associated value of ``'branches'`` should be a non-empty list or tuple of the form::
-
-                [[{'type': ...}, ...],
-                [{'type': ...}, ...],
-                ...]
-            
-            indicating the different branches.
-
-            The associated value of ``'merge_layer'`` should be a keras.layers.Layer object that 
-            controls how to merge the outputs of the branches.
-        '''
-        branches = layer_specs.get('branches')
-        validate_branches(branches,ind)
-
-        inputs = []
-        outputs = []
-        
-        for branch_ind, branch in enumerate(branches):
-            inp = kl.Input(shape=(
-                                  self.input_shape_
-                                  if not isinstance(self.input_shape_,list)
-                                  else self.input_shape_[branch_ind]
-                                )
-                            )
-            inputs.append(inp)
-
-            out = inp
-            for sub_ind, struct in enumerate(branch):
-                out = self._add_block(struct,f"{ind}.{branch_ind}.{sub_ind}",out)
-            
-            outputs.append(out)
-
-        return inputs, layer_specs.get('merge_layer')(outputs)
-
     def _add_inception_block(self,inception_specs,ind,x):
         '''
         Adds an inception block to the model with the given parameters.
@@ -968,6 +924,100 @@ class SKGraphEstimator(BaseEstimator):
         except Exception as e:
             raise RuntimeError(f"Exception found in regressor layer {ind}: {e}") from e
 
+    def _add_multiinput_block(self,layer_specs,ind):
+        '''
+        Adds a multi-input block to the model.
+
+        Must be the first layer if added.
+
+        Parameters
+        ----------
+        layer_specs : dict
+            A dictionary containing the keys ``'branches'`` and ``'merge_layer'``.
+
+            The associated value of ``'branches'`` should be a non-empty list or tuple of the form::
+
+                [[{'type': ...}, ...],
+                [{'type': ...}, ...],
+                ...]
+            
+            indicating the different branches.
+
+            The associated value of ``'merge_layer'`` should be a keras.layers.Layer object that 
+            controls how to merge the outputs of the branches.
+        '''
+        branches = layer_specs.get('branches')
+        validate_branches(branches,ind)
+
+        inputs = []
+        outputs = []
+        
+        for branch_ind, branch in enumerate(branches):
+            inp = kl.Input(shape=(
+                                  self.input_shape_
+                                  if not isinstance(self.input_shape_,list)
+                                  else self.input_shape_[branch_ind]
+                                )
+                            )
+            inputs.append(inp)
+
+            out = inp
+            for sub_ind, struct in enumerate(branch):
+                out = self._add_block(struct,f"{ind}.{branch_ind}.{sub_ind}",out)
+            
+            outputs.append(out)
+
+        return inputs, layer_specs.get('merge_layer')(outputs)
+
+    def _add_unet_block(self,layer_specs,ind,x):
+        filters = layer_specs.get('filters')
+        output_filters = layer_specs.get('output_filters')
+        kernel_size = layer_specs.get('kernel_size')
+        depth = layer_specs.get('depth')
+
+        if filters is None:
+            raise ValueError(f"Unet block {ind}: No filters given")
+
+        if output_filters is None:
+            raise ValueError(f"Unet block {ind}: Output filters is not given")
+        
+        if kernel_size is None:
+            raise ValueError(f"Unet block {ind}: No kernel size given")
+
+        if depth is None:
+            raise ValueError(f"Unet block {ind}: Depth is not given")
+
+        n_groups = layer_specs.get('groups',8)
+        pool_size = layer_specs.get('pool_size',(2,2))
+
+        x = Conv3Layer(filters,
+                       kernel_size=kernel_size,
+                       n_groups=n_groups)(x)
+
+        skips = []
+        n_filters_lt = []
+        for n in range(depth):
+            n += 1
+            n_filters = 2 ** n * filters
+            n_filters_lt.append(n_filters)
+
+            x,skip = UnetDownLayer(n_filters,
+                                   kernel_size,
+                                   n_groups,pool_size)(x)
+            skips.append(skip)
+
+        x = UnetBottleneck(n_filters_lt[-1]*2,
+                           kernel_size=kernel_size,
+                           n_groups=n_groups)
+        
+        for skip,n_filters in zip(reversed(skips),reversed(n_filters_lt)):
+            x = UnetUpLayer(n_filters,
+                            kernel_size,
+                            n_groups)([x,skip])
+
+        x = kl.Conv2D(output_filters,kernel_size=1)(x)
+        return x
+
     def _add_block(self,struct,ind,x):
         '''
         Adds a block to the model with the given parameters.
@@ -1017,8 +1067,10 @@ class SKGraphEstimator(BaseEstimator):
             return self._add_regressor_block(model,ind,x)
         elif layer_type == 'NN' or layer_type.lower() == 'neural':
             return self._add_neural_block(layer_specs,ind,x)
-        elif layer_type == 'multi-output':
+        elif layer_type.lower() == 'multi-output':
             return self._add_multioutput_block(layer_specs,ind,x)
+        elif layer_type == 'U' or layer_type.lower() in ['unet','u-net']:
+            return self._add_unet_block(layer_specs,ind,x)
         else:
             return self._add_simple_block(layer_type,layer_specs,ind,x)
 
@@ -1045,7 +1097,7 @@ class SKGraphEstimator(BaseEstimator):
         '''
         self.is_multi_output_ = False
 
-        if structs[0]['type'] == 'multi-input':
+        if structs[0]['type'].lower() == 'multi-input':
             struct = structs[0]
             structs = structs[1:]
 
@@ -1058,13 +1110,13 @@ class SKGraphEstimator(BaseEstimator):
             x = inputs
 
         for ind,struct in enumerate(structs):
-            if struct['type'] == 'multi-input':
+            if struct['type'].lower() == 'multi-input':
                 raise ValueError("Multi-input block must come first")
 
             if ind == len(structs) - 1:
                 outputs = self._add_block(struct,ind,x)
             else:
-                if struct['type'] == 'multi-output':
+                if struct['type'].lower() == 'multi-output':
                     raise ValueError("Multi-output block must come last")
                 
                 x = self._add_block(struct,ind,x)
@@ -1081,7 +1133,6 @@ class SKGraphEstimator(BaseEstimator):
 
         # Creates and compiles the model
         model = keras.Model(inputs, outputs)
-        model.compile(optimizer=self._make_optimizer(),loss=self.loss,metrics=self.metrics)
 
         return model
 
@@ -1141,6 +1192,7 @@ class SKGraphEstimator(BaseEstimator):
         self.input_shape_ = self.input_shape if self.input_shape is not None else expec_inp
         
         self.model_ = self._build_model(structs)
+        self.model_.compile(optimizer=self._make_optimizer(),loss=self.loss,metrics=self.metrics)
 
         X,y = self._format_data(X,y)
 
