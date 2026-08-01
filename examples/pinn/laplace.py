@@ -71,7 +71,7 @@ conditions = [
     # u(0,y)=0
     {
         "location": {"x":0},
-        "n_steps":100,
+        "n_samples":100,
         "equation":[
             {
                 "var":"u",
@@ -85,7 +85,7 @@ conditions = [
     # u(1,y)=sinh(pi)*sin(pi*y)
     {
         "location": {"x":1},
-        "n_steps":100,
+        "n_samples":100,
         "equation":[
             {
                 "var":"u",
@@ -103,7 +103,7 @@ conditions = [
     # u(x,0)=0
     {
         "location":{"y":0},
-        "n_steps":100,
+        "n_samples":100,
         "equation":[
             {
                 "var":"u",
@@ -117,7 +117,7 @@ conditions = [
     # u(x,1)=0
     {
         "location":{"y":1},
-        "n_steps":100,
+        "n_samples":100,
         "equation":[
             {
                 "var":"u",
@@ -144,7 +144,7 @@ pinn = SKGraphPINN(
         "y":(0,1)
     },
 
-    n_steps=5000,
+    n_samples=5000,
 
     model_structure=model_structure,
 
@@ -205,7 +205,7 @@ print(
 # PDE residual
 # ----------------------------------
 
-residual = pinn.calc_eqn(
+residual = pinn._calc_eqn(
     tf.constant(points,dtype=tf.float32)
 )
 

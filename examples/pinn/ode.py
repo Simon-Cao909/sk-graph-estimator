@@ -62,7 +62,7 @@ equation_structure = [
 conditions = [
     {
         "location":{"x":0},
-        "n_steps":100,
+        "n_samples":100,
         "equation":[
             {
                 "var":"u",
@@ -72,7 +72,7 @@ conditions = [
     },
     {
         "location":{"x":1},
-        "n_steps":100,
+        "n_samples":100,
         "equation":[
             {
                 "var":"u",
@@ -94,7 +94,7 @@ pinn = SKGraphPINN(
     bounds={
         "x":(0,1)
     },
-    n_steps=1000,
+    n_samples=1000,
 
 
     # inherited SKGraphEstimator params
@@ -152,7 +152,7 @@ plt.close()
 # Check PDE residual
 # ----------------------------------
 
-residual = pinn.calc_eqn(
+residual = pinn._calc_eqn(
     tf.constant(
         x,
         dtype=tf.float32
