@@ -22,9 +22,9 @@ More advanced types:
 - 'R' or 'resnet', 'residual'
 - 'I' or 'incep', 'inception'
 - 'X' or 'xcep', 'xception'
-- 'regressor'
+- 'REG' or 'regressor'
 - 'NN' or 'neural'
-- 'multi-output'
+- 'MO' or 'multi-output'
 - 'multi-input'
 
 ## For simple layers:
@@ -39,40 +39,40 @@ OR
  ...}
 ```
 The names of the keys are the names of the hyperparameters used by Keras (req is for required, opt for optional) and are also listed below. The expected value type is given in brackets () after the key
-- For 'D': Input MUST have shape (n_samples, n_features)
+- For 'dense': Input MUST have shape (n_samples, n_features)
     - 'units' or 'neurons' (req | int): Number of neurons for the layer (ex. 32)
-    - 'activation' (req | str or callable): Activation function of the layer (ex. 'relu')
-- For 'd':
+    - 'activation' (opt | str or callable | default='linear'): Activation function of the layer (ex. 'relu')
+- For 'dropout':
     - 'rate' (req | float from [0,1)): Dropout rate (ex. 0.1)
-- For 'C' or 'CT': Input MUST have shape (n_samples,...,channels) or (n_samples,channels,...)
+- For 'conv' or 'conv_transpose': Input MUST have shape (n_samples,...,channels) or (n_samples,channels,...)
     - 'filters' (req | int): The number of filters (ex. 8)
     - 'kernel_size' (req | tuple): The size of the input passed to each neuron in the filter (ex. (3,3))
         - The dimension of the tuple will decide which convolutional layer to use
         - Ex. For 1-D kernel_size, the 1-D convolution layer will be used
-    - 'activation' (req | str or callable): Activation function of the layer
+    - 'activation' (opt | str or callable | default='linear'): Activation function of the layer
     - 'strides' (opt | tuple | default=(1,1,...)): How we shift the group of neurons to use as input for the next neuron
     - 'padding' (opt | str | default='valid'): Either 'valid' or 'same'
     - 'data_format' (opt | str | default=None (Keras sets it to 'channels_last')): Either 'channels_first' or 'channels_last'
-- For 'GN':
+- For 'group_norm':
     - 'groups' (opt | int | default=32)
     - 'axis' (opt | int | default=-1)
     - 'epsilon' (opt | float | default=0.001)
     - 'center' (opt | bool | default=True)
     - 'scale' (opt | bool | default=True)
-- For 'BN':
+- For 'batch_norm':
     - 'axis' (opt | int | default=-1)
     - 'momentum' (opt | float, default=0.99)
     - 'epsilon' (opt | float | default=0.001)
     - 'center' (opt | bool | default=True)
     - 'scale' (opt | bool | default=True)
-- For 'MP':
+- For 'max_pooling':
     - 'pool_size' (opt | tuple | default=(2,2))
     - 'strides' (opt | tuple or None | default=None)
     - 'padding' (opt | str | default='valid')
     - 'data_format' (opt | str | default=None (Keras sets it to 'channels_last'))
-- For 'GAP' or 'F':
+- For 'global_avg_pooling' or 'flatten':
     - 'data_format' (opt | str | default=None (Keras sets it to 'channels_last'))
-- For 'UP':
+- For 'upsample':
     - 'size' (opt | tuple | default=(2,2))
     - 'data_format' (opt | str | default=None (Keras sets it to 'channels_last'))
 - For 'custom':
@@ -80,7 +80,7 @@ The names of the keys are the names of the hyperparameters used by Keras (req is
     - You can use this to make custom blocks as well, if you'd like
 
 ## For advanced blocks and layers:
-- For 'R'
+- For 'resnet'
     - This is a ResNet block. If you do not know what this is you can read more on it on https://en.wikipedia.org/wiki/Residual_neural_network
     - For your dictionary, you must either have it to be of the form:
     ```python
@@ -102,7 +102,7 @@ The names of the keys are the names of the hyperparameters used by Keras (req is
     - The 'layers' key must have a list or tuple of dictionaries as the associated value. This list takes on the same form as model_structure. Think of it as building another model inside this block
     - 'final_activation' (opt | str or callable | default='linear'): This is the activation function applied on x + F(x)
     - 'allow_projection' (opt | bool | default=True): If set to True, in the case F(x) and x are of different shapes, this will handle it by projecting x onto the shape F(x). If set to False, an error will be raised if x and F(x) are of different shapes
-- For 'I'
+- For 'inception'
     - This is an inception block. If you do not know what this is you can read more on it on https://en.wikipedia.org/wiki/Inception_(deep_learning_architecture)
     - For your dictionary, it must be of the form:
     ```python
@@ -129,7 +129,7 @@ The names of the keys are the names of the hyperparameters used by Keras (req is
     - Note that the 'branches' key is required. The associated value should be a list of lists. The nth list in this list denotes the nth branch. Each list should be of the form of model_structure. Think of it as building multiple different models in different branches
         - Do not actually put #n in the list please. That's just to make the documentation clearer
     - At the end, the branch outputs will be concatenated
-- For 'X'
+- For 'xception'
     - This is an xception block. If you do not know what this is you can read more on it on https://arxiv.org/abs/1610.02357
     - For your dictionary, it must be of the form:
     ```python
@@ -161,7 +161,7 @@ The names of the keys are the names of the hyperparameters used by Keras (req is
         - 'filters' (req | int): denotes the number of filters for the SeparableConv2D layer
         - 'kernel_size' (req | tuple): denotes the kernel size for the SeparableConv2D layer
         - 'padding' (opt | str | default='same'): denotes the padding for the layer
-        - 'activation' (req | str or callable): denotes the activation function for the layer
+        - 'activation' (opt | str or callable | default='linear'): denotes the activation function for the layer
     - 'final_activation' (opt | str or callable | default='linear'): This is the activation function applied on x + F(x)
     - 'allow_projection' (opt | bool | default=True): If set to True, in the case F(x) and x are of different shapes, this will handle it by projecting x onto the shape F(x). If set to False, an error will be raised if x and F(x) are of different shapes
 - For 'regressor'
@@ -180,7 +180,7 @@ The names of the keys are the names of the hyperparameters used by Keras (req is
     - * Note that as most sklearn models do not use gradients, backpropagation will STOP at this layer. As a result, all previous layers will NOT be trained. Because of this, it is advised to put this near the front of the model
     - * As a further note, if this layer is put in parallel with a standard Keras layer (ex. Dense) in an inception block, then the standard Keras layer and all other standard layers before it will still be trained. Issues only arise when the sklearn layer is in series with the other layers
     - This is primarily used for combining the outputs of different models
-- For 'NN'
+- For 'neural'
     - This allows you to put a custom pre-trained Keras model into the neural network
     - For your dictionary, it must be of the form:
     ```python

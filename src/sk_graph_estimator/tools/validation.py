@@ -33,3 +33,15 @@ def validate_branches(branches,ind):
         if not isinstance(branch, (list,tuple)) or len(branch) == 0:
             raise ValueError(f"Block {ind}, branch index {branch_ind}: "
                                 "each branch must be a non-empty list or tuple of layer specs")
+
+def validate_structure(structure,name,build_setting='normal',can_be_empty=False):
+    if not can_be_empty:
+        if len(structure) == 0:
+            raise ValueError(f"{name} cannot be empty")
+
+    if not isinstance(structure,(list,tuple)):
+        raise TypeError(f"{name} must be a list or tuple")
+
+    if build_setting == 'normal':
+        if any(not isinstance(struct,dict) for struct in structure):
+            raise TypeError(f"Each element in {name} must be a dictionary")

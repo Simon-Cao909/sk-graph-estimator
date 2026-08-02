@@ -7,6 +7,7 @@ from .tools.quick_build_parser import parse_quick
 from .tools.autoencoder_base.sae import SAE
 from .tools.autoencoder_base.vae import VAE, sampling
 from .tools.score import compute_score, neg_mse_score
+from .tools.add_block import add_block
 
 class SKGraphAutoencoder(SKGraphEstimator):
     '''
@@ -165,15 +166,15 @@ class SKGraphAutoencoder(SKGraphEstimator):
 
             if ind == len(encoder_structs) - 1:
                 if model_type == 'standard':
-                    latent = self._add_block(struct,ind,x)
+                    latent = add_block(struct,ind,x)
                     encoder_outputs = latent
                 elif model_type == 'variational':
-                    latent_mean = self._add_block(struct,ind,x)
-                    log_var = self._add_block(struct,ind,x)
+                    latent_mean = add_block(struct,ind,x)
+                    log_var = add_block(struct,ind,x)
                     latent = kl.Lambda(sampling)([latent_mean,log_var])
                     encoder_outputs = [latent_mean, log_var, latent]
             else:
-                x = self._add_block(struct,ind,x)
+                x = add_block(struct,ind,x)
         
         self.latent_shape_ = keras.backend.int_shape(latent)[1:]
         self.encoder_ = keras.Model(inputs=encoder_inputs,outputs=encoder_outputs)
@@ -207,9 +208,9 @@ class SKGraphAutoencoder(SKGraphEstimator):
                 raise NotImplementedError("Multi-output decoders are not supported")
             
             if ind == len(decoder_structs) - 1:
-                decoded = self._add_block(struct,ind,x)
+                decoded = add_block(struct,ind,x)
             else:
-                x = self._add_block(struct,ind,x)
+                x = add_block(struct,ind,x)
         
         self.output_shape_ = keras.backend.int_shape(decoded)[1:]
         self.decoder_ = keras.Model(inputs=decoder_inputs,outputs=decoded)

@@ -20,7 +20,7 @@ model = SKGraphClassifier(model_structure = [
                                                 {'type':'D', 'units':32, 'activation':'relu'},
                                                 {'type':'D', 'units':10, 'activation':'softmax'}
                                             ],
-                          epochs = 20,
+                          epochs = 3,
                           learning_rate = 1e-3,
                           loss = 'categorical_crossentropy',
                           optimizer = 'adam',

@@ -1,22 +1,20 @@
 import tensorflow as tf
 from tensorflow import keras
-from tensorflow.keras import layers as kl
 import tensorflow.keras.random as kr
 import tensorflow.keras.ops as ko
 import numpy as np
 from numbers import Number
 
 from .estimator import SKGraphEstimator
+
 from .tools.pinn_base import PINN
 from .tools.score import compute_score
+from .tools.validation import validate_structure
 from .tools.struct_tools import get_any
-
-def scoring_func(_, residual):
-    return -tf.reduce_mean(tf.square(residual)).numpy()
 
 class SKGraphPINN(SKGraphEstimator):
 
-    scoring_func = staticmethod(scoring_func)
+    scoring_func = staticmethod(lambda _,residual: -tf.reduce_mean(tf.square(residual)).numpy())
     must_be_vector = True
 
     def __init__(self,
@@ -70,6 +68,56 @@ class SKGraphPINN(SKGraphEstimator):
         self.conditions = conditions
         self.bounds = bounds
         self.n_samples = n_samples
+
+    def _validate_hyperparams(self):
+        '''
+        Validates the hyperparameters of the model.
+
+        Will raise an error of they are not proper.
+
+        Raises
+        ------
+        TypeError
+            If model structure is not a list or tuple. 
+
+            If any element in model structure is not a dictionary. 
+
+            If equation structure is not a list or tuple.
+
+            If any element in equation structure is not a dictionary.
+
+            If conditions is not a list or tuple.
+
+            If any element in conditions is not a dictionary.
+
+            If bounds is not a dict.
+        
+        ValueError
+            If model structure is empty.
+            
+            If equation structure is empty.
+
+            If conditions is empty.
+
+            If variables is empty.
+
+            If validation split is not in [0,1). 
+
+            If early stopping is True and validation split <= 0.
+        
+        KeyError
+            If any element in model structure does not have key 'type'.
+        '''
+        super()._validate_hyperparams()
+
+        validate_structure(self.equation_structure,"equation_structure")
+        validate_structure(self.conditions,"conditions",can_be_empty=True)
+
+        if not isinstance(self.bounds,dict):
+            raise TypeError("bounds must be a dictionary")
+
+        if len(self.variables) == 0:
+            raise ValueError("variables cannot be empty!")
 
     def _calc_eqn(self,X_r,structure=None):
         '''
@@ -349,6 +397,39 @@ class SKGraphPINN(SKGraphEstimator):
         self.validation_scores_ = history.history.get("val_loss")
 
         return self
+
+    def predict(self,X=None):
+        '''
+        Predicts the labels given the features.
+
+        Parameters
+        ----------
+        X : array-like or None, default=None
+            An array of shape ``(n_samples,n_variables)``.
+
+            If None, one will be made from ``n_samples`` and ``bounds``.
+
+        Returns
+        -------
+        y : numpy.ndarray or list
+            The function evaluated at every point.
+            
+            Shape is ``(n_samples,n_outputs)``.
+        
+        Raises
+        ------
+        ValueError
+            If the dimension of the features is not equal 
+            to the dimension of the input.
+
+            For multi-input, if the number of inputs is not 
+            equal to the number of features
+
+            For multi-input, if the number of samples is not 
+            equal between arrays
+        '''
+        X_r = self.X_r if X is None else X
+        return super().predict(X_r)
 
     def score(self,X=None,y=None):
         '''
