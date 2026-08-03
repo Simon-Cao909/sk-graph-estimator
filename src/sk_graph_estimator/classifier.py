@@ -7,7 +7,7 @@ from .estimator import SKGraphEstimator
 
 class SKGraphClassifier(SKGraphEstimator, ClassifierMixin):
     '''
-    SKGraphRegressor is the classifier branch of SKGraphEstimator.
+    SKGraphClassifier is the classifier branch of SKGraphEstimator.
 
     The only changes are that .predict() now returns class labels and 
     .predict_proba() is a new method that returns probabilities
