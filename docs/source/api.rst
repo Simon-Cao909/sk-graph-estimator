@@ -31,3 +31,11 @@ SKGraphRegressor
 .. autoclass:: sk_graph_estimator.regressor.SKGraphRegressor
    :members:
    :show-inheritance:
+
+
+SKGraphPINN
+----------------
+
+.. autoclass:: sk_graph_estimator.pinn.SKGraphPINN
+   :members:
+   :show-inheritance:

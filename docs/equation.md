@@ -3,27 +3,40 @@
 equation_structure must be a list or tuple of dictionaries. The nth dictionary in this list or tuple denotes the nth term in the equation. When thinking of the equation, put all terms on one side so the other side is zero.
 
 Each dictionary in this list can have keys and values:
-- KEY: 'variable' or 'var' (opt)
+- KEY: 'variable' or 'var' (opt | default='u')
     - The value should be a string that is equal to the variable that this term will be focusing on.
-    - This variable can either be in self.variables or it can be 'u', where the focus will be the function
+    - This variable can either be in self.variables or it can be 'u', where the focus will be the function. It can also be 'const', where then 1 will be the focus
     - If this key is not included, the default variable will be 'u'
     - Ex. {'variable':'x',...}
-- KEY: 'derivatives' or 'deriv' (opt)
+- KEY: 'derivatives' or 'deriv' (opt | default=[])
     - The value should be a list of variables
     - The nth element in this list denotes the variable that the nth derivative will be with respect to
     - This should only be included if the value associated with 'variable' was 'u'. if the list has a nonzero length when the variable was not 'u', an error will be raised
     - If this key is not included, the default will be [], meaning no derivatives will be taken
     - Ex. {'derivatives':['x','x','t'],...}
-- KEY: 'coefficient' or 'coef' (opt)
-    - The value should either be a number or a string
+- KEY: 'coefficient' or 'coef' (opt | default=1)
+    - The value should either be a number, string, or of the form equation_structure
     - This is the coefficient of the term that will be applied after the operator (see below)
     - If a number was given, the number will simply be the coefficient
     - If a string was given:
         - If the string is just numeric, that number will be the coefficient
-        - If the string contains non-numeric characters, then the only non-numeric characters that can be there are variables, integers, 'u', 'π', or 'e', where the respective thing will be multiplied
+        - If the string contains non-numeric characters, then the only non-numeric characters that can be there are variables, constants, integers, 'u' (the function), 'π', or 'e', where the respective thing will be multiplied
+    - If it was given of the form equation_structure, then the coefficient will be the given equation
     - If this key is not included, the default will be 1
-    - Ex. {'coefficient':'2π',...}, {'coefficient':np.pi,...}, {'coefficient':'2xtu',...}
-- KEY: 'operator' or 'op' (opt)
+    - Ex. {'coefficient':'2π',...}, {'coefficient':np.pi,...}, {'coefficient':'2xtu',...}, or:
+    ```python
+    {
+        ### Coefficient is sin(x) + cos(y)
+        'coefficient':[
+            {'var':'x',
+             'operator': lambda x: ko.sin(x)},
+            {'var':'y',
+             'operator': lambda y: ko.cos(y)},
+        ],
+        ...
+    }
+    ```
+- KEY: 'operator' or 'op' (opt | default=lambda x: x)
     - The value should either be a callable or a string
     - This will be the operator that acts on the focus
     - If a callable, it should only accept one parameter and the focus will be passed as the argument. Only use tensorflow or keras.ops in making this operator
@@ -80,9 +93,11 @@ Each dictionary in this list can have keys and values:
 - KEY: 'location' or 'loc' (req)
     - The value should be a dictionary with keys being the variable and values being some value within the bounds of that variable
     - This specifies where the condition lies
-    - Currently, only one location is supported, meaning the dictionary should only have one element
-    - Ex. {'location':{'t':0},...}. This specifies an initial condition
-- KEY: 'n_samples', 'n-samples', or 'samples' (opt)
+    - Ex.
+        - {'location':{'t':0},...} - This specifies an initial condition
+        - {'location':{'t':0,'x':0},...} - This specifies a condition at (x,t) = (0,0)
+    - ** This cannot handle locations like x = y, x^2 + y^2 = 1, etc. If you would like to use those locations, you can change your variables **
+- KEY: 'n_samples', 'n-samples', or 'samples' (opt | default=50)
     - The value should be an integer
     - This specifies the number of samples to draw uniformly between the bounds for every other variable that wasn't fixed by the location
     - The resulting array passed into the equation will be of shape (n_samples,n_variables)
@@ -155,3 +170,50 @@ conditions = [
 
 ]
 ```
+
+# For constants
+
+constants must be a list or tuple of dictionaries. The nth dictionary denotes the nth constant
+
+Each dictionary in this list can have keys and values:
+- KEY: 'name' (req)
+    - The value should be a one character string which is the name of the constant
+    - This specifies the constant's name and will be how you refer to it when using it as a coefficient
+    - Ex. {'name':'c',...}
+- KEY: 'value' or 'val' (req)
+    - The value should be of type Number
+    - This specifies the value of the constant. If it is trainable, this will be the initial value
+    - Ex. {'value':3,...}
+- KEY: 'trainable' or 'train' (opt | default=False)
+    - The value should be a bool
+    - This specifies whether the constant is trainable by gradient descent
+    - This feature is added so inverse PINNs are supported
+    - Ex. {'trainable':False,...}
+- KEY: 'dtype' or 'type' (opt | default='float32')
+    - The value should be a string
+    - This specifies the type of the constant
+    - Ex. {'dtype':'float64'}
+
+## Examples
+
+```python
+constants = [
+    {'name':'c',
+     'value':3,
+     'trainable':False,
+     'dtype':'float64'},
+    
+    {'name':'d',
+     'value':1,
+     'trainable':True,
+     'dtype':'float32'}
+]
+```
+
+Then, in equation_structure, you can do:
+
+```python
+{'coef':'3c',...}
+```
+
+If you just want to add or subtract the constant, make the focus of the term 'const' and set the coefficient to be 'c'.

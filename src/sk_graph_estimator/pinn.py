@@ -23,6 +23,8 @@ class SKGraphPINN(SKGraphEstimator):
                  conditions,
                  bounds,
                  n_samples,
+                 constants=[],
+                 data=None,
                  **kwargs):
         '''
         Parameters
@@ -58,6 +60,20 @@ class SKGraphPINN(SKGraphEstimator):
 
             Numbers will be uniformly sampled between the bounds for the variable.
         
+        constants : list or tuple
+            Simlar to model_structure but specifies the constants in the equation.
+
+            See ``equation.md`` on how to format this.
+
+        data : tf.Tensor
+            A tensor of shape ``(n_samples,len(variables) + 1)``
+            
+            The first ``len(variables)`` columns contain the coordinates of each 
+            sample point (in the same order as ``variables``), while the final column 
+            contains the corresponding observed value of the solution.
+
+            Often used in tandem with trainable constants for iPINNs.
+            
         **kwargs
             Inherited from SKGraphEstimator
         '''
@@ -68,6 +84,8 @@ class SKGraphPINN(SKGraphEstimator):
         self.conditions = conditions
         self.bounds = bounds
         self.n_samples = n_samples
+        self.constants = constants
+        self.data = data
 
     def _validate_hyperparams(self):
         '''
@@ -91,13 +109,13 @@ class SKGraphPINN(SKGraphEstimator):
             If any element in conditions is not a dictionary.
 
             If bounds is not a dict.
+
+            If constants is not a list or tuple.
         
         ValueError
             If model structure is empty.
             
             If equation structure is empty.
-
-            If conditions is empty.
 
             If variables is empty.
 
@@ -112,6 +130,7 @@ class SKGraphPINN(SKGraphEstimator):
 
         validate_structure(self.equation_structure,"equation_structure")
         validate_structure(self.conditions,"conditions",can_be_empty=True)
+        validate_structure(self.constants,"constants",can_be_empty=True)
 
         if not isinstance(self.bounds,dict):
             raise TypeError("bounds must be a dictionary")
@@ -221,10 +240,19 @@ class SKGraphPINN(SKGraphEstimator):
                         for v in variables:
                             if char == v:
                                 cfs *= var_to_val[v]
+                                break
+
+                        for name,value in self.constants_.items():
+                            if char == name:
+                                cfs *= value
+            elif isinstance(coef,(list,tuple)):
+                cfs = self._calc_eqn(X_r,coef)
+            else:
+                raise ValueError(f"Unknown coefficient type {type(coef)}")
 
             if var == 'u':
                 var_val = derivs[ind]
-            elif not var:
+            elif var == 'const':
                 var_val = const
             else:
                 var_val = var_to_val[var]
@@ -311,15 +339,15 @@ class SKGraphPINN(SKGraphEstimator):
             loc = get_any(structure,['loc','location'],err=KeyError(f"No location given for condition {ind}"))
             n_samples = get_any(structure,['n_samples','n-samples','samples'],50)
 
-            var, value = next(iter(loc.items()))
-            if var not in variables:
-                raise ValueError(f"Condition {ind}: variable in 'location' is not one of the given variables")
+            for var in loc:
+                if var not in variables:
+                    raise ValueError(f"Condition {ind}: {var} is not one of the given variables")
 
-            if not (self.bounds[var][0] <= value <= self.bounds[var][1]):
-                raise ValueError(f"Condition {ind}: location must be between the bounds!")
+                if not (self.bounds[var][0] <= loc[var] <= self.bounds[var][1]):
+                    raise ValueError(f"Condition {ind}: location for {var} must be between the bounds!")
 
             X_b_data.append(ko.concatenate(
-                               [ko.ones((n_samples,1))*value if v == var
+                               [ko.ones((n_samples,1))*loc[var] if v in loc
                                else kr.uniform((n_samples,1),mins[i],maxs[i])
                                for i,v in enumerate(variables)],
                                axis=1
@@ -327,6 +355,26 @@ class SKGraphPINN(SKGraphEstimator):
 
         self.X_r = X_r
         self.X_b_data = X_b_data
+
+    def _prepare_constants(self):
+        self.constants_ = {}
+
+        for ind,c in enumerate(self.constants):
+            name = get_any(c,['name'],err=f"No name given for constant {ind}")
+
+            if not isinstance(name,str):
+                raise ValueError(f"Name for constant {ind} must be a string. Type of name given: {type(name)}")
+            if len(name) != 1:
+                raise ValueError(f"Name for constant {ind} must be single character. Name given: {name}")
+
+            if name in self.variables:
+                raise ValueError(f"Name for constant {name} is also the name of a variable.")
+
+            value = get_any(c,['val','value'],err=f"No value given for constant {ind}")
+            trainable = get_any(c,['trainable','train'],False)
+            dtype = get_any(c,['dtype','type'],'float32')
+
+            self.constants_[name] = keras.Variable(value,dtype=dtype,trainable=trainable)
 
     def fit(self,X=None,y=None,**fit_params):
         '''
@@ -352,6 +400,7 @@ class SKGraphPINN(SKGraphEstimator):
         self
             The trained estimator.
         '''
+        self._prepare_constants()
         self._prepare_data()
         self.y_was_1d_ = False
         self.is_multi_input_ = self.is_multi_output_ = False
@@ -373,7 +422,9 @@ class SKGraphPINN(SKGraphEstimator):
                            maxs=self.maxs,
                            model=self._build_model(structs),
                            calc_eqn=self._calc_eqn,
-                           calc_bound_eqn=self._calc_conds)
+                           calc_bound_eqn=self._calc_conds,
+                           constants=self.constants_,
+                           data=self.data)
         self.model_.compile(
             optimizer=self._make_optimizer()
         )
@@ -450,6 +501,7 @@ class SKGraphPINN(SKGraphEstimator):
         score : np.float32
             The negative mean of the equation residual.
         '''
+        self._check_is_fitted()
         X_r = self.X_r if X is None else X
         return compute_score(None,self._calc_eqn(X_r),
                         scoring_func=self.scoring_func,
