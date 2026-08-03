@@ -13,6 +13,8 @@ Embed pre-trained scikit-learn regressors into neural networks
 
 Standard and variational autoencoders
 
+Physics Informed Neural Networks (PINN) and Inverse PINNs
+
 scikit-learn BaseEstimator compatibility
 
 ## Getting started
