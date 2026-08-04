@@ -1,5 +1,7 @@
 # For equation_structure
 
+## If list or tuple
+
 equation_structure must be a list or tuple of dictionaries. The nth dictionary in this list or tuple denotes the nth term in the equation. When thinking of the equation, put all terms on one side so the other side is zero.
 
 Each dictionary in this list can have keys and values:
@@ -20,7 +22,11 @@ Each dictionary in this list can have keys and values:
     - If a number was given, the number will simply be the coefficient
     - If a string was given:
         - If the string is just numeric, that number will be the coefficient
-        - If the string contains non-numeric characters, then the only non-numeric characters that can be there are variables, constants, integers, 'u' (the function), 'π', or 'e', where the respective thing will be multiplied
+        - If the string contains non-numeric characters, then the only non-numeric characters that can be there are variables, constants, integers (0-9), 'u' (the function), 'π', or 'e', where the respective thing will be multiplied
+            - Note that '^' does not work here. If you would like to use powers, simply write the character multiple times (Ex. 'xx' for x^2)
+            - Note that '10' will be interpreted as 1 * 0. If you would like to use any multi-digit integer, you can include it in 'operator'
+        - The string can also start with '-', where then the coefficient will just be negative.
+        - Please note that '^' does not work here. If you would like to use powers, simply write the character multiple times (Ex. 'xx' for x^2)
     - If it was given of the form equation_structure, then the coefficient will be the given equation
     - If this key is not included, the default will be 1
     - Ex. {'coefficient':'2π',...}, {'coefficient':np.pi,...}, {'coefficient':'2xtu',...}, or:
@@ -46,6 +52,22 @@ Each dictionary in this list can have keys and values:
     - If this key is not included, the default will be the lambda x: x
     - Ex. {'operator': lambda y: ko.sin(np.pi*y)}
 
+## If string
+
+equation_structure can also be a string, where you get to write out the equation. However, this must still follow a particular format to be read properly by the parser.
+- Each term must be separated by either a + or a -
+    - You can also start with first term with a '-' to make it negative
+- Do not use '=' anywhere. The equation is set to zero automatically
+- For each term, the coefficients must be between round brackets
+    - Currently, powers are not supported in this, so do not use the '^' symbol anywhere. If you would like to take coefficients to the power, then simply repeat them between the brackets
+- The focus of each term must be after the coefficient. This focus can only be of one variable
+- In the focus, derivatives are indicated by the '_' symbol, where each character after that symbol will be a derivative
+- You can also use operators in the focus. The operator must use () around its operand
+    - If the coefficient to your term is 1 and you want to include an operator, you must still write "()" before your term
+
+To see how it will be read by the parser, you can import and run tools.building.quick_parser.parse_eqn on your string.
+
+
 ## Examples
 
 ### Laplace equation
@@ -63,6 +85,32 @@ equation_structure = [
         "coef": 1
     }
 ]
+
+### OR ###
+
+equation_structure = "u_xx + u_yy"
+```
+
+### Forced wave equation
+
+```python
+equation_structure = [
+    {
+        "derivatives":['t','t'],
+    },
+    {
+        "derivatives":['x','x'],
+        "coef":"-cc" # where c is included in constants. See below
+    },
+    {
+        "var":"x",
+        "op":lambda x: ko.cos(x)
+    }
+]
+
+### OR ###
+
+equation_structure = "u_tt - (cc)u_xx - ()cos(x)"
 ```
 
 # For conditions
@@ -71,7 +119,7 @@ conditions must be a list or tuple of dictionaries. The nth dictionary in this l
 
 Each dictionary in this list can have keys and values:
 - KEY: 'equation', 'eqn' (req)
-    - The value should be a list or tuple of the same format as equation_structure
+    - The value should be a list, tuple, or string of the same format as equation_structure
     - This specifies the equation of the condition
     - Remember to put all terms on one side when thinking of the equation
     - Ex. The following equation would be for u(x_location,y)=sinh(pi)\*sin(pi\*y)

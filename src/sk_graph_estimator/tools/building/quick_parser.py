@@ -1,3 +1,5 @@
+import re
+
 def safe_get(lt,ind,fallback=None):
     '''
     Safely gets an element from a list.
@@ -159,3 +161,76 @@ def parse_quick(structs):
             new_structure.append({'type':layer_type})
     
     return new_structure
+
+def split_terms(eqn):
+    parts = []
+    depth = 0
+    start = 0
+
+    for i, c in enumerate(eqn):
+        if c == "(":
+            depth += 1
+        elif c == ")":
+            depth -= 1
+        elif c in "+-" and depth == 0 and i > start:
+            parts.append(eqn[start:i])
+            start = i
+
+    parts.append(eqn[start:])
+    return parts
+
+def parse_eqn(eqn):
+    eqn = eqn.replace(" ","")
+
+    parts = split_terms(eqn)
+    parts = [p.strip("+") for p in parts]
+
+    structure = []
+
+    for term in parts:
+        sign = '-' if term.startswith('-') else ''
+        term = term.lstrip("+-")
+        
+        l_brack = term.find("(")
+        r_brack = term.find(")")
+
+        if (l_brack == -1 and r_brack == -1) or (r_brack == 1 + l_brack):
+            cf = -1 if sign == '-' else 1
+        elif l_brack == -1 or r_brack == -1:
+            raise ValueError(f"left bracket found: {True if l_brack != -1 else False}\n"
+                             f"right bracket found: {True if r_brack != -1 else False}")
+        else:
+            cf = sign+term[l_brack+1:r_brack]
+
+        focus = term[r_brack+1:]
+
+        if len(focus) == 0:
+            var = 'const'
+
+        l_brack2 = focus.find("(")
+        r_brack2 = focus.find(")")
+
+        if l_brack2 == -1 and r_brack2 == -1:
+            operator = 'identity'
+        elif l_brack2 == -1 or r_brack2 == -1:
+            raise ValueError(f"left bracket found: {True if l_brack2 != -1 else False}\n"
+                             f"right bracket found: {True if r_brack2 != -1 else False}")
+        else:
+            operator = focus[:l_brack2]
+            focus = focus[l_brack2+1:r_brack2]
+
+        focus = focus.split("_")
+        var = focus[0]
+
+        if len(focus) == 1:
+            focus.append("")
+
+        derivs = list(focus[1])
+        structure.append({
+            'var':var,
+            'deriv':derivs,
+            'coef':cf,
+            'op':operator
+        })
+
+    return structure

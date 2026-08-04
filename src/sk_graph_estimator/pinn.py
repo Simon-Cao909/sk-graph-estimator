@@ -11,6 +11,7 @@ from .tools.base.pinn_base import PINN
 from .tools.score import compute_score
 from .tools.validation import validate_structure
 from .tools.building.struct_tools import get_any
+from .tools.building.quick_parser import parse_eqn
 
 class SKGraphPINN(SKGraphEstimator):
 
@@ -35,7 +36,7 @@ class SKGraphPINN(SKGraphEstimator):
             
             Ex. ``['x','y','z']``
         
-        equation_structure : list or tuple
+        equation_structure : list or tuple or string
             Similar to model_structure but species the equation.
 
             See ``equation.md`` on how to format this.
@@ -262,7 +263,7 @@ class SKGraphPINN(SKGraphEstimator):
                 if coef.isnumeric():
                     cfs = int(coef)
                 else:
-                    cfs = 1
+                    cfs = -1 if coef.startswith("-") else 1
                     for char in coef:
                         if char == 'u':
                             cfs *= u
@@ -272,8 +273,6 @@ class SKGraphPINN(SKGraphEstimator):
                             cfs *= np.pi
                         elif char == 'e':
                             cfs *= np.e
-                        elif char == '-':
-                            cfs *= -1
 
                         for v in variables:
                             if char == v:
@@ -296,6 +295,7 @@ class SKGraphPINN(SKGraphEstimator):
                 var_val = var_to_val[var]
 
             str_to_op = {
+                'identity':lambda x: x,
                 'sin':ko.sin,
                 'sinh':ko.sinh,
                 'cos':ko.cos,
@@ -335,10 +335,7 @@ class SKGraphPINN(SKGraphEstimator):
         '''
         return self._calc_eqn(X_b[ind],
                             get_any(self.conditions[ind],
-                                    ['eqn','equation'],
-                                    err=KeyError(
-                                        f"No equation given for condition {ind}"
-                                        )
+                                    ['eqn','equation']
                                 )
                             )
 
@@ -359,6 +356,18 @@ class SKGraphPINN(SKGraphEstimator):
             self.loss_weighting['conditions'] = self.loss_weighting.pop('conds',1)
         elif 'cond' in self.loss_weighting:
             self.loss_weighting['conditions'] = self.loss_weighting.pop('cond',1)
+
+        if isinstance(self.equation_structure,str):
+            self.equation_structure = parse_eqn(self.equation_structure)
+
+        for ind,cond in enumerate(self.conditions):
+            eqn = get_any(cond,
+                          ['eqn','equation'],
+                          err=KeyError(
+                                f"No equation given for condition {ind}"
+                                ))
+            if isinstance(eqn,str):
+                cond['eqn'] = parse_eqn(eqn)
 
     def _prepare_data(self):
         '''
