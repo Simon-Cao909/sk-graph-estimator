@@ -3,7 +3,7 @@ from tensorflow.keras import layers as kl
 
 from .struct_tools import get_any
 from .check_shapes import shapes_equal
-from .validation import validate_branches
+from ..validation import validate_branches
 from .sklearn_layer import SKlearnLayer
 from .unet_layers import Conv3Layer, UnetDownLayer, UnetUpLayer, UnetBottleneck
 

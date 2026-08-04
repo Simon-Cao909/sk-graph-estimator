@@ -7,10 +7,10 @@ from numbers import Number
 
 from .estimator import SKGraphEstimator
 
-from .tools.pinn_base import PINN
+from .tools.base.pinn_base import PINN
 from .tools.score import compute_score
 from .tools.validation import validate_structure
-from .tools.struct_tools import get_any
+from .tools.building.struct_tools import get_any
 
 class SKGraphPINN(SKGraphEstimator):
 
@@ -23,8 +23,9 @@ class SKGraphPINN(SKGraphEstimator):
                  conditions,
                  bounds,
                  n_samples,
-                 constants=[],
+                 constants=None,
                  data=None,
+                 loss_weighting=None,
                  **kwargs):
         '''
         Parameters
@@ -60,12 +61,14 @@ class SKGraphPINN(SKGraphEstimator):
 
             Numbers will be uniformly sampled between the bounds for the variable.
         
-        constants : list or tuple
+        constants : list or tuple or None, default=None
             Simlar to model_structure but specifies the constants in the equation.
+
+            If None, there will be no constants.
 
             See ``equation.md`` on how to format this.
 
-        data : tf.Tensor
+        data : tf.Tensor or None, default=None
             A tensor of shape ``(n_samples,len(variables) + 1)``
             
             The first ``len(variables)`` columns contain the coordinates of each 
@@ -73,6 +76,25 @@ class SKGraphPINN(SKGraphEstimator):
             contains the corresponding observed value of the solution.
 
             Often used in tandem with trainable constants for iPINNs.
+
+            If None, there will be no extra data.
+
+            Currently, this must be float32.
+        
+        loss_weighting : dict or None, default=None
+            The weighting for each loss.
+            
+            If given, must be of the form::
+
+                {'pde':x,
+                 'conditions':y, # or 'conds', 'cond'
+                 'data':z}
+            
+            Where the loss will be calculated by L = x*L_pde + y*L_cond + z*L_data.
+
+            ``'data'`` is not necessary if there was none given.
+
+            If None, no loss weighting will be applied.
             
         **kwargs
             Inherited from SKGraphEstimator
@@ -86,6 +108,7 @@ class SKGraphPINN(SKGraphEstimator):
         self.n_samples = n_samples
         self.constants = constants
         self.data = data
+        self.loss_weighting = loss_weighting
 
     def _validate_hyperparams(self):
         '''
@@ -111,6 +134,8 @@ class SKGraphPINN(SKGraphEstimator):
             If bounds is not a dict.
 
             If constants is not a list or tuple.
+
+            If loss_weighting is not a dictionary.
         
         ValueError
             If model structure is empty.
@@ -125,6 +150,8 @@ class SKGraphPINN(SKGraphEstimator):
         
         KeyError
             If any element in model structure does not have key 'type'.
+
+            If loss_weighting does not have keys 'pde' and 'conditions' and, if applicable, 'data'.
         '''
         super()._validate_hyperparams()
 
@@ -137,6 +164,15 @@ class SKGraphPINN(SKGraphEstimator):
 
         if len(self.variables) == 0:
             raise ValueError("variables cannot be empty!")
+
+        if not isinstance(self.loss_weighting,dict):
+            raise TypeError("loss_weighting must be a dictionary!")
+
+        if 'pde' not in self.loss_weighting or 'conditions' not in self.loss_weighting or ('data' not in self.loss_weighting and self.data is not None):
+            raise KeyError("loss_weighting must have keys 'pde', 'conditions', and 'data' (if data was given)")
+
+
+    ### CALCULATING EQUATIONS AND CONDITIONS ###
 
     def _calc_eqn(self,X_r,structure=None):
         '''
@@ -236,6 +272,8 @@ class SKGraphPINN(SKGraphEstimator):
                             cfs *= np.pi
                         elif char == 'e':
                             cfs *= np.e
+                        elif char == '-':
+                            cfs *= -1
 
                         for v in variables:
                             if char == v:
@@ -303,6 +341,24 @@ class SKGraphPINN(SKGraphEstimator):
                                         )
                                 )
                             )
+
+
+    ### PREPARATION BEFORE FITTING ###
+
+    def _prepare_hyperparams(self):
+        '''
+        Prepares the hyperparameters before training
+        '''
+        if self.constants is None:
+            self.constants = []
+
+        if self.loss_weighting is None:
+            self.loss_weighting = {'pde':1,'conditions':1,'data':1}
+
+        if 'conds' in self.loss_weighting:
+            self.loss_weighting['conditions'] = self.loss_weighting.pop('conds',1)
+        elif 'cond' in self.loss_weighting:
+            self.loss_weighting['conditions'] = self.loss_weighting.pop('cond',1)
 
     def _prepare_data(self):
         '''
@@ -376,6 +432,9 @@ class SKGraphPINN(SKGraphEstimator):
 
             self.constants_[name] = keras.Variable(value,dtype=dtype,trainable=trainable)
 
+
+    ### SKLEARN METHODS ###
+
     def fit(self,X=None,y=None,**fit_params):
         '''
         Trains the model to predict the given PDE
@@ -400,8 +459,10 @@ class SKGraphPINN(SKGraphEstimator):
         self
             The trained estimator.
         '''
+        self._prepare_hyperparams()
         self._prepare_constants()
         self._prepare_data()
+
         self.y_was_1d_ = False
         self.is_multi_input_ = self.is_multi_output_ = False
 
@@ -424,7 +485,8 @@ class SKGraphPINN(SKGraphEstimator):
                            calc_eqn=self._calc_eqn,
                            calc_bound_eqn=self._calc_conds,
                            constants=self.constants_,
-                           data=self.data)
+                           data=self.data,
+                           loss_weighting=self.loss_weighting)
         self.model_.compile(
             optimizer=self._make_optimizer()
         )

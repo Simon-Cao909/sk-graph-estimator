@@ -14,6 +14,7 @@ class PINN(km.Model):
                  calc_bound_eqn,
                  constants,
                  data,
+                 loss_weighting,
                  **kwargs):
         super().__init__(*kwargs)
         self.X_data = X_data
@@ -26,6 +27,7 @@ class PINN(km.Model):
 
         self.constants = constants
         self.data = data
+        self.loss_weighting = loss_weighting
 
         self.loss_tracker = kmet.Mean()
 
@@ -34,19 +36,19 @@ class PINN(km.Model):
         return [self.loss_tracker]
 
     def _get_loss(self,X_r):
-        loss = ko.sum(ko.square(self.calc_eqn(X_r)))
+        loss = ko.sum(ko.square(self.calc_eqn(X_r)))*self.loss_weighting['pde']
 
         for i in range(len(self.X_data)):
-            loss += ko.sum(ko.square(self.calc_bound_eqn(self.X_data,i)))
+            loss += ko.sum(ko.square(self.calc_bound_eqn(self.X_data,i)))*self.loss_weighting['conditions']
 
         if self.data is not None:
             pred = self.model(self.data[:,0:-1])
-            loss += ko.sum(ko.square(ko.reshape(self.data[:,-1],pred.shape) - pred))
+            loss += ko.sum(ko.square(ko.reshape(self.data[:,-1],pred.shape) - pred))*self.loss_weighting['data']
 
         return loss
 
     def train_step(self,X_r):
-        with tf.GradientTape(persistent=True) as tape:
+        with tf.GradientTape() as tape:
             trainable_variables = self.trainable_variables + [val for val in self.constants.values() if val.trainable]
             loss = self._get_loss(X_r)
 

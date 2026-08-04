@@ -3,11 +3,11 @@ from tensorflow.keras import layers as kl
 import numpy as np
 
 from .estimator import SKGraphEstimator
-from .tools.quick_build_parser import parse_quick
-from .tools.autoencoder_base.sae import SAE
-from .tools.autoencoder_base.vae import VAE, sampling
+from .tools.building.quick_build_parser import parse_quick
+from .tools.base.sae import SAE
+from .tools.base.vae import VAE, sampling
 from .tools.score import compute_score, neg_mse_score
-from .tools.add_block import add_block
+from .tools.building.add_block import add_block
 
 class SKGraphAutoencoder(SKGraphEstimator):
     '''
