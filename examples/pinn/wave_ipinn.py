@@ -2,7 +2,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras import ops as ko
 
-from sk_graph_estimator.pinn import SKGraphPINN
+from skdeep.pinn import DeepPINN
 
 variables = ['x','t']
 
@@ -55,7 +55,7 @@ model_structure = [
     ['D',1,'linear'],
 ]
 
-model = SKGraphPINN(variables=variables,
+model = DeepPINN(variables=variables,
                     equation_structure=equation_structure,
                     conditions=conditions,
                     bounds=bounds,

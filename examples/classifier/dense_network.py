@@ -1,4 +1,4 @@
-from sk_graph_estimator.classifier import SKGraphClassifier
+from skdeep.classifier import DeepClassifier
 from tensorflow import keras
 
 (x_train, y_train), (x_test, y_test) = keras.datasets.mnist.load_data()
@@ -9,7 +9,7 @@ xte_shape = x_test.shape
 x_train = x_train.reshape(xtr_shape[0],xtr_shape[1]*xtr_shape[2])
 x_test = x_test.reshape(xte_shape[0],xte_shape[1]*xte_shape[2])
 
-model = SKGraphClassifier(model_structure = [
+model = DeepClassifier(model_structure = [
                                                 {'type':'D', 'units':64, 'activation':'relu'},
                                                 {'type':'d', 'rate':0.1},
                                                 {'type':'D', 'units':64, 'activation':'relu'},

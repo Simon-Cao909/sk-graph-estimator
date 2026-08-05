@@ -1,41 +1,41 @@
 API Reference
 =============
 
-SKGraphEstimator
+DeepEstimator
 ----------------
 
-.. autoclass:: sk_graph_estimator.estimator.SKGraphEstimator
+.. autoclass:: skdeep.estimator.DeepEstimator
    :members:
    :show-inheritance:
 
 
-SKGraphAutoencoder
-------------------
-
-.. autoclass:: sk_graph_estimator.autoencoder.SKGraphAutoencoder
-   :members:
-   :show-inheritance:
-
-
-SKGraphClassifier
+DeepClassifier
 -----------------
 
-.. autoclass:: sk_graph_estimator.classifier.SKGraphClassifier
+.. autoclass:: skdeep.classifier.DeepClassifier
    :members:
    :show-inheritance:
 
 
-SKGraphRegressor
+DeepRegressor
 ----------------
 
-.. autoclass:: sk_graph_estimator.regressor.SKGraphRegressor
+.. autoclass:: skdeep.regressor.DeepRegressor
    :members:
    :show-inheritance:
 
 
-SKGraphPINN
+DeepAutoencoder
+------------------
+
+.. autoclass:: skdeep.autoencoder.DeepAutoencoder
+   :members:
+   :show-inheritance:
+
+
+DeepPINN
 ----------------
 
-.. autoclass:: sk_graph_estimator.pinn.SKGraphPINN
+.. autoclass:: skdeep.pinn.DeepPINN
    :members:
    :show-inheritance:

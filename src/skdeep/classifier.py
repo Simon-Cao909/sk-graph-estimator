@@ -3,11 +3,11 @@ from sklearn.metrics import accuracy_score
 import numpy as np
 from tensorflow.keras.utils import to_categorical
 
-from .estimator import SKGraphEstimator
+from .estimator import DeepEstimator
 
-class SKGraphClassifier(SKGraphEstimator, ClassifierMixin):
+class DeepClassifier(DeepEstimator, ClassifierMixin):
     '''
-    SKGraphClassifier is the classifier branch of SKGraphEstimator.
+    DeepClassifier is the classifier branch of DeepEstimator.
 
     The only changes are that .predict() now returns class labels and 
     .predict_proba() is a new method that returns probabilities
@@ -26,7 +26,7 @@ class SKGraphClassifier(SKGraphEstimator, ClassifierMixin):
         y : np.ndarray or list of np.ndarray
             y as one-hot encoded
         '''
-        data = SKGraphEstimator._format_data(self,X,y)
+        data = DeepEstimator._format_data(self,X,y)
 
         if y is not None:
             data = list(data)
@@ -76,7 +76,7 @@ class SKGraphClassifier(SKGraphEstimator, ClassifierMixin):
             For multi-input, if the number of samples is not 
             equal between arrays
         '''
-        return SKGraphEstimator.predict(self,X)
+        return DeepEstimator.predict(self,X)
 
     def predict(self,X):
         '''

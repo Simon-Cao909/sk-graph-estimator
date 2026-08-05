@@ -2,7 +2,7 @@ import numpy as np
 import tensorflow as tf
 import tensorflow.keras.ops as ko
 
-from sk_graph_estimator.pinn import SKGraphPINN
+from skdeep.pinn import DeepPINN
 
 
 # ----------------------------------
@@ -87,7 +87,7 @@ conditions = [
 # Create estimator
 # ----------------------------------
 
-pinn = SKGraphPINN(
+pinn = DeepPINN(
     variables=["x"],
     equation_structure=equation_structure,
     conditions=conditions,
@@ -97,7 +97,7 @@ pinn = SKGraphPINN(
     n_samples=1000,
 
 
-    # inherited SKGraphEstimator params
+    # inherited DeepEstimator params
     model_structure=model_structure,
     epochs=100,
     batch_size=128,

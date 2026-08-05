@@ -2,16 +2,16 @@ from tensorflow import keras
 from tensorflow.keras import layers as kl
 import numpy as np
 
-from .estimator import SKGraphEstimator
+from .estimator import DeepEstimator
 from .tools.building.quick_parser import parse_quick
 from .tools.base.sae import SAE
 from .tools.base.vae import VAE, sampling
 from .tools.score import compute_score, neg_mse_score
 from .tools.building.add_block import add_block
 
-class SKGraphAutoencoder(SKGraphEstimator):
+class DeepAutoencoder(DeepEstimator):
     '''
-    SKGraphAutoencoder is a subclass of SKGraphEstimator that is meant to
+    DeepAutoencoder is a subclass of DeepEstimator that is meant to
     create standard and variational autoencoders
     '''
 

@@ -2,8 +2,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras import ops as ko
 
-from sk_graph_estimator.pinn import SKGraphPINN
-
+from skdeep.pinn import DeepPINN
 
 # ----------------------------------
 # Model architecture
@@ -133,7 +132,7 @@ conditions = [
 # Create estimator
 # ----------------------------------
 
-pinn = SKGraphPINN(
+pinn = DeepPINN(
     variables=["x","y"],
 
     equation_structure=equation_structure,
@@ -253,7 +252,7 @@ im0 = axes[0].imshow(
     aspect="auto"
 )
 
-axes[0].set_title("SKGraphPINN prediction")
+axes[0].set_title("DeepPINN prediction")
 axes[0].set_xlabel("x")
 axes[0].set_ylabel("y")
 fig.colorbar(im0, ax=axes[0])

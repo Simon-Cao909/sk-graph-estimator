@@ -1,11 +1,11 @@
 from sklearn.base import RegressorMixin
 from sklearn.metrics import r2_score
 
-from .estimator import SKGraphEstimator
+from .estimator import DeepEstimator
 
-class SKGraphRegressor(SKGraphEstimator, RegressorMixin):
+class DeepRegressor(DeepEstimator, RegressorMixin):
     '''
-    SKGraphRegressor is the regressor branch of SKGraphEstimator.
+    DeepRegressor is the regressor branch of DeepEstimator.
 
     The only thing different is the functionality of .score().
     '''

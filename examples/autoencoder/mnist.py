@@ -1,6 +1,7 @@
-from sk_graph_estimator.autoencoder import SKGraphAutoencoder
+from skdeep.autoencoder import DeepAutoencoder
 from tensorflow import keras
 import numpy as np
+
 
 (x_train, _), (x_test, _) = keras.datasets.mnist.load_data()
 
@@ -10,7 +11,7 @@ x_test = x_test.astype('float32').reshape(x_test.shape[0],28,28,1) / 255
 x_train = x_train[:10000]
 x_test = x_test[:5000]
 
-model = SKGraphAutoencoder(encoder_structure=[
+model = DeepAutoencoder(encoder_structure=[
                                     {'type':'C','filters':16,'kernel_size':(3,3),'activation':'relu','padding':'same'},
                                     {'type':'MP','pool_size':(2,2),'strides':(2,2)},
                                     {'type':'C','filters':32,'kernel_size':(3,3),'activation':'relu','padding':'same'},

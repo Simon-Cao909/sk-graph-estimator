@@ -1,4 +1,4 @@
-from sk_graph_estimator.pinn import SKGraphPINN
+from skdeep.pinn import DeepPINN
 
 stress_test_equation = [
     {
@@ -78,7 +78,7 @@ stress_test_equation = [
     }
 ]
 
-model = SKGraphPINN(
+model = DeepPINN(
     variables=["x","y","z"],
     model_structure=[['D',64,'tanh'],['D',64,'tanh'],['D',64,'tanh'],['D',1,'linear']],
     build_setting='quick',

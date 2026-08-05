@@ -6,7 +6,7 @@ import numpy as np
 from numbers import Number
 import matplotlib.pyplot as plt
 
-from .estimator import SKGraphEstimator
+from .estimator import DeepEstimator
 
 from .tools.base.pinn_base import PINN
 from .tools.score import compute_score
@@ -14,7 +14,7 @@ from .tools.validation import validate_structure
 from .tools.building.struct_tools import get_any
 from .tools.building.quick_parser import parse_eqn
 
-class SKGraphPINN(SKGraphEstimator):
+class DeepPINN(DeepEstimator):
 
     scoring_func = staticmethod(lambda _,residual: -tf.reduce_mean(tf.square(residual)).numpy())
     must_be_vector = True
@@ -99,7 +99,7 @@ class SKGraphPINN(SKGraphEstimator):
             If None, no loss weighting will be applied.
             
         **kwargs
-            Inherited from SKGraphEstimator
+            Inherited from DeepEstimator
         '''
         super().__init__(**kwargs)
 

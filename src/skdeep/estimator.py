@@ -10,9 +10,9 @@ from .tools.score import compute_score, neg_mse_score
 from .tools.validation import validate_branches, validate_structure
 from .tools.building.add_block import add_block
 
-class SKGraphEstimator(BaseEstimator):
+class DeepEstimator(BaseEstimator):
     '''
-    SKGraphEstimator is a machine learning algorithm that combines the user-friendly 
+    DeepEstimator is a machine learning algorithm that combines the user-friendly 
     features of scikit-learn regressors and the versatility of Tensorflow with Keras
     '''
 
@@ -664,9 +664,9 @@ class SKGraphEstimator(BaseEstimator):
         '''
         Scores the model based on how it performs on given data.
 
-        - For SKGraphEstimator, this returns the neg mse score.
-        - For SKGraphRegressor, this returns the r2 score.
-        - For SKGraphClassifier, this returns the accuracy score.
+        - For DeepEstimator, this returns the neg mse score.
+        - For DeepRegressor, this returns the r2 score.
+        - For DeepClassifier, this returns the accuracy score.
 
         Parameters
         ----------
