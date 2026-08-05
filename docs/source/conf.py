@@ -6,11 +6,6 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-import os
-import sys
-
-sys.path.insert(0, os.path.abspath("../../src"))
-
 project = 'skdeep'
 copyright = '2026, Simon W. Cao'
 author = 'Simon W. Cao'
@@ -19,10 +14,7 @@ release = '1.7.5'
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = [
-    "sphinx.ext.autodoc",
-    "sphinx.ext.napoleon",
-]
+extensions = []
 
 templates_path = ['_templates']
 exclude_patterns = []
@@ -35,6 +27,11 @@ exclude_patterns = []
 html_theme = 'alabaster'
 html_static_path = ['_static']
 
-html_css_files = [
-    "custom.css",
+extensions = [
+    "sphinx.ext.autodoc",
+    "sphinx.ext.napoleon",
+    "sphinx.ext.viewcode",
+    "sphinx_autodoc_typehints",
 ]
+
+html_theme = "sphinx_rtd_theme"
