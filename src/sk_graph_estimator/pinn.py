@@ -4,6 +4,7 @@ import tensorflow.keras.random as kr
 import tensorflow.keras.ops as ko
 import numpy as np
 from numbers import Number
+import matplotlib.pyplot as plt
 
 from .estimator import SKGraphEstimator
 
@@ -341,6 +342,47 @@ class SKGraphPINN(SKGraphEstimator):
 
 
     ### PREPARATION BEFORE FITTING ###
+    
+    def _get_data(self,loc,n_samples,mins,maxs,label=None):
+        '''
+        Gets the data for a given location, n_samples, min, max
+
+        Parameters
+        ----------
+        loc : dict
+            Fixed location.
+
+        n_samples : int
+            Number of samples to draw uniformly between mins and maxs.
+
+        mins : array-like
+            Minimums of variables.
+
+        maxs : array-like
+            Maximums of variables.
+
+        label : anything
+            The label before the error.
+        
+        Returns
+        -------
+        data : tf.Tensor
+        '''
+        variables = self.variables
+
+        for var in loc:
+            if var not in variables:
+                raise ValueError(f"{label}{var} is not one of the given variables")
+
+            if not (self.bounds[var][0] <= loc[var] <= self.bounds[var][1]):
+                raise ValueError(f"{label}location for {var} must be between the bounds!")
+
+        return (ko.concatenate(
+                            [ko.ones((n_samples,1))*loc[var] if v in loc
+                            else kr.uniform((n_samples,1),mins[i],maxs[i])
+                            for i,v in enumerate(self.variables)],
+                            axis=1
+        ))
 
     def _prepare_hyperparams(self):
         '''
@@ -387,12 +429,7 @@ class SKGraphPINN(SKGraphEstimator):
         self.maxs = maxs
 
         ### Preparation for PDE ###
-        N_r = self.n_samples
-        vars_r = [kr.uniform((N_r,1),
-                            mins[i],
-                            maxs[i]) for i in range(len(variables))]
-
-        X_r = ko.concatenate(vars_r,axis=1)
+        X_r = self._get_data({},self.n_samples,mins,maxs)
 
         ### Preparation for conditions ###
         conds = self.conditions
@@ -400,23 +437,10 @@ class SKGraphPINN(SKGraphEstimator):
         X_b_data = []
 
         for ind, structure in enumerate(conds):
-
             loc = get_any(structure,['loc','location'],err=KeyError(f"No location given for condition {ind}"))
             n_samples = get_any(structure,['n_samples','n-samples','samples'],50)
 
-            for var in loc:
-                if var not in variables:
-                    raise ValueError(f"Condition {ind}: {var} is not one of the given variables")
-
-                if not (self.bounds[var][0] <= loc[var] <= self.bounds[var][1]):
-                    raise ValueError(f"Condition {ind}: location for {var} must be between the bounds!")
-
-            X_b_data.append(ko.concatenate(
-                               [ko.ones((n_samples,1))*loc[var] if v in loc
-                               else kr.uniform((n_samples,1),mins[i],maxs[i])
-                               for i,v in enumerate(variables)],
-                               axis=1
-            ))
+            X_b_data.append(self._get_data(loc,n_samples,mins,maxs,f"Condition {ind}: "))
 
         self.X_r = X_r
         self.X_b_data = X_b_data
@@ -533,7 +557,7 @@ class SKGraphPINN(SKGraphEstimator):
 
         Returns
         -------
-        y : numpy.ndarray or list
+        y : numpy.ndarray
             The function evaluated at every point.
             
             Shape is ``(n_samples,n_outputs)``.
@@ -552,6 +576,10 @@ class SKGraphPINN(SKGraphEstimator):
         '''
         X_r = self.X_r if X is None else X
         return super().predict(X_r)
+
+    def predict_at_loc(self,loc,n_samples):
+        self._check_is_fitted()
+        return self.predict(self._get_data(loc,n_samples,self.mins,self.maxs,label="Running Predict_at_loc: "))
 
     def score(self,X=None,y=None):
         '''
@@ -578,3 +606,37 @@ class SKGraphPINN(SKGraphEstimator):
                         scoring_func=self.scoring_func,
                         weights=self.scoring_weights,
                         must_be_vector=self.must_be_vector)
+
+
+    ### CUSTOM METHODS ###
+
+    def plot(self,loc,n_samples):
+        self._check_is_fitted()
+
+        X = self._get_data(loc,n_samples,self.mins,self.maxs)
+        pred = self.predict(X)
+
+        free_vars = [(i,v) for i,v in enumerate(self.variables) if v not in loc]
+
+        if len(free_vars) == 1:
+            free_ind,free_var = free_vars[0]
+            x = np.asarray(X[:,free_ind])
+            y = np.asarray(pred[:,0])
+
+            order = np.argsort(x)
+            plt.plot(x[order],y[order])
+            plt.xlabel(free_var)
+
+        elif len(free_vars) == 2:
+            x = X[:,free_vars[0][0]]
+            y = X[:,free_vars[1][0]]
+
+            plt.scatter(x,y,c=pred[:,0])
+            plt.xlabel(free_vars[0][1])
+            plt.ylabel(free_vars[1][1])
+
+        else:
+            raise ValueError(f"Unable to plot {len(free_vars)} free variables")
+
+        plt.show()
+        plt.close()

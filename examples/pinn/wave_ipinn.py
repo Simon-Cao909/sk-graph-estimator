@@ -29,16 +29,7 @@ u = np.sin(np.pi*x) * np.cos(np.pi*c_true*t)
 data = np.column_stack([x, t, u])
 data = tf.cast(data,tf.float32)
 
-equation_structure = [
-    {
-        "derivatives":["t","t"],
-        "coefficient":1
-    },
-    {
-        "derivatives":["x","x"],
-        "coefficient":"-cc"
-    }
-]
+equation_structure = "u_tt - (cc)u_xx"
 
 conditions = [
     {'loc':{'t':0},
@@ -84,4 +75,4 @@ model = SKGraphPINN(variables=variables,
                     loss_weighting={'pde':1,'conditions':10,'data':100})
 model.fit()
 
-print(model.constants_) # 1.9893 Pretty good!
+print(model.constants_) # 1.98 Pretty good!

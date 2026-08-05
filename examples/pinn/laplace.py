@@ -148,7 +148,7 @@ pinn = SKGraphPINN(
 
     model_structure=model_structure,
 
-    epochs=100,
+    epochs=50,
     batch_size=256,
 
     learning_rate=1e-3,
@@ -184,7 +184,7 @@ points = np.column_stack([
     Y.ravel()
 ])
 
-
+print("X shape:", X.shape)
 prediction = pinn.predict(points).reshape(X.shape)
 
 
@@ -235,7 +235,7 @@ import matplotlib.pyplot as plt
 # ----------------------------------
 
 error = np.abs(prediction - truth)
-
+print("pred shape:", prediction.shape)
 
 fig, axes = plt.subplots(
     1,
@@ -288,3 +288,5 @@ fig.colorbar(im2, ax=axes[2])
 
 
 plt.show()
+
+pinn.plot(loc={"x":0},n_samples=1000)

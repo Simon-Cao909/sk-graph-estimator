@@ -49,6 +49,7 @@ Each dictionary in this list can have keys and values:
     - If a string, it should be one of:
         - 'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'ln'
         - Where that operator will then be acting on the focus
+        - Again, the coefficient is applied after the operator, so these string operators will only do op(x) and not op(cx)
     - If this key is not included, the default will be the lambda x: x
     - Ex. {'operator': lambda y: ko.sin(np.pi*y)}
 
@@ -64,6 +65,7 @@ equation_structure can also be a string, where you get to write out the equation
 - In the focus, derivatives are indicated by the '_' symbol, where each character after that symbol will be a derivative
 - You can also use operators in the focus. The operator must use () around its operand
     - If the coefficient to your term is 1 and you want to include an operator, you must still write "()" before your term
+    - Currently, only string operators are supported
 
 To see how it will be read by the parser, you can import and run tools.building.quick_parser.parse_eqn on your string.
 
