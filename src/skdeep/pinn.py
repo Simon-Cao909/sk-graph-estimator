@@ -577,34 +577,6 @@ class DeepPINN(DeepEstimator):
         X_r = self.X_r if X is None else X
         return super().predict(X_r)
 
-    def predict_at_loc(self,loc,n_samples=50):
-        '''
-        Predicts the value of the function at a given location.
-
-        Parameters
-        ----------
-        loc : dict
-            The location to evaluate the function of the form::
-
-                {var1:val1,
-                 var2,val2,
-                 ...}
-            
-            All variables not in the keys will be considered unfixed.
-        
-        n_samples : int, default=50
-            The number of samples to draw uniformly between the bounds for the unfixed variables.
-        
-        Returns
-        -------
-        pred : numpy.ndarray
-            The function evaluated at every point.
-
-            Shape is ``(n_samples,n_outputs)``
-        '''
-        self._check_is_fitted()
-        return self.predict(self._get_data(loc,n_samples,self.mins,self.maxs,label="Running Predict_at_loc: "))
-
     def score(self,X=None,y=None):
         '''
         Scores how well the model performs on the PDE.
@@ -633,6 +605,34 @@ class DeepPINN(DeepEstimator):
 
 
     ### CUSTOM METHODS ###
+
+    def predict_at_loc(self,loc,n_samples=50):
+        '''
+        Predicts the value of the function at a given location.
+
+        Parameters
+        ----------
+        loc : dict
+            The location to evaluate the function of the form::
+
+                {var1:val1,
+                 var2,val2,
+                 ...}
+            
+            All variables not in the keys will be considered unfixed.
+        
+        n_samples : int, default=50
+            The number of samples to draw uniformly between the bounds for the unfixed variables.
+        
+        Returns
+        -------
+        pred : numpy.ndarray
+            The function evaluated at every point.
+
+            Shape is ``(n_samples,n_outputs)``
+        '''
+        self._check_is_fitted()
+        return self.predict(self._get_data(loc,n_samples,self.mins,self.maxs,label="Running Predict_at_loc: "))
 
     def plot(self,loc,
              n_samples=50,

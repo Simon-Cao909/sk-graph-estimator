@@ -5,9 +5,18 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "skdeep"
 version = "1.7.5"
-description = "A Python Keras wrapper that supports modern architectures and Scikit-learn workflows"
+authors = [
+    { name="Simon W. Cao", email="simon.cao909@gmail.com" },
+]
+description = "A Python Keras wrapper that supports modern architectures and Scikit-learn workflows."
 readme = "README.md"
 requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+license = "MIT"
+license-files = ["LICENSE*"]
 
 dependencies = [
     "scikit-learn",
@@ -18,3 +27,8 @@ dependencies = [
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[project.urls]
+Homepage = "https://github.com/Simon-Cao909/skdeep"
+Issues = "https://github.com/Simon-Cao909/skdeep/issues"
+Documentation = "https://skdeep.readthedocs.io/en/latest/"

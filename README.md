@@ -20,9 +20,7 @@ scikit-learn BaseEstimator compatibility
 ## Getting started
 
 ```bash
-git clone https://github.com/Simon-Cao909/skdeep.git
-cd skdeep
-pip install .
+pip install skdeep
 ```
 
 ```python
