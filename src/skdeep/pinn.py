@@ -546,7 +546,7 @@ class DeepPINN(DeepEstimator):
 
     def predict(self,X=None):
         '''
-        Predicts the labels given the features.
+        Predicts the values of the function given the input.
 
         Parameters
         ----------
@@ -577,7 +577,31 @@ class DeepPINN(DeepEstimator):
         X_r = self.X_r if X is None else X
         return super().predict(X_r)
 
-    def predict_at_loc(self,loc,n_samples):
+    def predict_at_loc(self,loc,n_samples=50):
+        '''
+        Predicts the value of the function at a given location.
+
+        Parameters
+        ----------
+        loc : dict
+            The location to evaluate the function of the form::
+
+                {var1:val1,
+                 var2,val2,
+                 ...}
+            
+            All variables not in the keys will be considered unfixed.
+        
+        n_samples : int, default=50
+            The number of samples to draw uniformly between the bounds for the unfixed variables.
+        
+        Returns
+        -------
+        pred : numpy.ndarray
+            The function evaluated at every point.
+
+            Shape is ``(n_samples,n_outputs)``
+        '''
         self._check_is_fitted()
         return self.predict(self._get_data(loc,n_samples,self.mins,self.maxs,label="Running Predict_at_loc: "))
 
@@ -610,7 +634,49 @@ class DeepPINN(DeepEstimator):
 
     ### CUSTOM METHODS ###
 
-    def plot(self,loc,n_samples):
+    def plot(self,loc,
+             n_samples=50,
+             draw=True,
+             ax=None):
+        '''
+        Plots the function.
+
+        For one free variable, generates a u vs. free_var plot.
+
+        For two free variables, generates a colored scatter plot.
+
+        Cannot handle any other amount of free variables.
+
+        Parameters
+        ----------
+        loc : dict
+            The location to evaluate the function of the form::
+
+                {var1:val1,
+                 var2,val2,
+                 ...}
+            
+            All variables not in the keys will be considered unfixed.
+
+            The number of unfixed variables can be no more than 2.
+        
+        n_samples : int, default=50
+            The number of samples to draw uniformly between the bounds for the unfixed variables.
+        
+        draw : bool, default=True
+            If True, will call plt.show()
+        
+        ax : matplotlib.axes.Axes or None, default=None
+            The axes object to plot with.
+
+            If None, one will be created.
+        
+        Returns
+        -------
+        ax : matplotlib.axes.Axes
+            The matplotlib.axes.Axes object belonging 
+            to the plotted distribution
+        '''
         self._check_is_fitted()
 
         X = self._get_data(loc,n_samples,self.mins,self.maxs)
@@ -618,25 +684,32 @@ class DeepPINN(DeepEstimator):
 
         free_vars = [(i,v) for i,v in enumerate(self.variables) if v not in loc]
 
+        if ax is None:
+            _,ax = plt.subplots()
+
         if len(free_vars) == 1:
             free_ind,free_var = free_vars[0]
             x = np.asarray(X[:,free_ind])
             y = np.asarray(pred[:,0])
 
             order = np.argsort(x)
-            plt.plot(x[order],y[order])
-            plt.xlabel(free_var)
+            ax.plot(x[order],y[order])
+            ax.set_xlabel(free_var)
+            ax.set_ylabel("u")
 
         elif len(free_vars) == 2:
             x = X[:,free_vars[0][0]]
             y = X[:,free_vars[1][0]]
 
-            plt.scatter(x,y,c=pred[:,0])
-            plt.xlabel(free_vars[0][1])
-            plt.ylabel(free_vars[1][1])
+            ax.scatter(x,y,c=pred[:,0],label='u')
+            ax.set_xlabel(free_vars[0][1])
+            ax.set_ylabel(free_vars[1][1])
+            ax.legend()
 
         else:
             raise ValueError(f"Unable to plot {len(free_vars)} free variables")
 
-        plt.show()
-        plt.close()
+        if draw:
+            plt.show()
+
+        return ax

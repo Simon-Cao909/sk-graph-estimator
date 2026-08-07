@@ -558,7 +558,9 @@ class DeepEstimator(BaseEstimator):
         self.input_shape_ = self.input_shape if self.input_shape is not None else expec_inp
         
         self.model_ = self._build_model(structs)
-        self.model_.compile(optimizer=self._make_optimizer(),loss=self.loss,metrics=self.metrics)
+        self.model_.compile(optimizer=self._make_optimizer(),
+                            loss=self.loss,
+                            metrics=self.metrics)
 
         X,y = self._format_data(X,y)
 
