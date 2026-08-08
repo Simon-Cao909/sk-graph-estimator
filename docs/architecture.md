@@ -16,6 +16,7 @@ Each dictionary in this list requires a key 'type', which denotes the type of la
 - 'GAP' or 'global_avg_pooling', 'global_average_pooling'
 - 'F' or 'flat', 'flatten'
 - 'UP' or 'upsampling', 'upsample', 'upsampling2d'
+- 'N' or 'normalization', 'norm'
 - 'custom'
 
 More advanced types:
@@ -75,6 +76,11 @@ The names of the keys are the names of the hyperparameters used by Keras (req is
 - For 'upsample':
     - 'size' (opt | tuple | default=(2,2))
     - 'data_format' (opt | str | default=None (Keras sets it to 'channels_last'))
+- For 'normalization':
+    - 'mins' (req | np.ndarray): Numpy array of minimums
+    - 'maxs' (req | np.ndarray): Numpy array of maximums
+    - Primarily used for DeepPINN, where both values must be of shape (n_variables,)
+    - This will normalize the output of the previous block to be between -1 and 1
 - For 'custom':
     - 'layer' (keras.layers.Layer or callable taking KerasTensor as input)
     - You can use this to make custom blocks as well, if you'd like
@@ -409,6 +415,7 @@ For simple layers
 - For 'MP': [layer_type,pool_size,strides,padding,data_format]
 - For 'GAP' or 'F': [layer_type,data_format]
 - For 'UP': [layer_type,size,data_format]
+- For 'N': [layer_type,mins,maxs]
 - For 'custom': [layer_type,layer]
 
 For advanced layers and blocks

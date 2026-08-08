@@ -10,6 +10,11 @@ from skdeep.pinn import DeepPINN
 
 model_structure = [
     {
+        "type": "Norm",
+        "mins": np.array([0,0]),
+        "maxs": np.array([1,1]),
+    },
+    {
         "type": "Dense",
         "units": 64,
         "activation": "tanh"

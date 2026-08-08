@@ -1,5 +1,6 @@
 from tensorflow import keras
 from tensorflow.keras import layers as kl
+import numpy as np
 
 from .struct_tools import get_any
 from .check_shapes import shapes_equal
@@ -171,6 +172,17 @@ def add_simple_block(layer_type,layer_specs,ind,x):
     elif layer_type == 'UP' or layer_type.lower() in ['upsampling','upsample','upsampling2d']:
         return kl.UpSampling2D(size=layer_specs.get('size',(2,2)),
                                 data_format=layer_specs.get('data_format'))(x)
+    elif layer_type == 'N' or layer_type.lower() in ['normalization','norm']:
+        mins = layer_specs.get('mins')
+        maxs = layer_specs.get('maxs')
+
+        if mins is None or maxs is None:
+            raise KeyError(f"mins and maxs must be given for normalization layer {ind}")
+
+        if any(not isinstance(m,np.ndarray) for m in [mins,maxs]):
+            raise ValueError(f"mins and maxs must be numpy arrays for normalization layer {ind}")
+        
+        return kl.Lambda(lambda x: 2.0*(x-mins)/(maxs-mins)-1.0)(x)
     elif layer_type.lower() == 'custom':
         layer = layer_specs.get('layer')
         if layer is None:

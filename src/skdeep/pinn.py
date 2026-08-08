@@ -269,7 +269,13 @@ class DeepPINN(DeepEstimator):
                 if coef.isnumeric():
                     cfs = int(coef)
                 else:
-                    cfs = -1 if coef.startswith("-") else 1
+                    if coef.startswith("-"):
+                        sign = -1
+                        coef = coef[1:]
+                    else:
+                        sign = 1
+
+                    cfs = 1
                     coef_operator = 'mult'
                     for char in coef:
                         to_apply = None
@@ -304,7 +310,7 @@ class DeepPINN(DeepEstimator):
                                 to_apply = value
 
                         if to_apply is not None:
-                            if coef_operator == '^':
+                            if coef_operator == 'pow':
                                 cfs **= to_apply
                             elif coef_operator == 'div':
                                 cfs /= to_apply
@@ -312,6 +318,8 @@ class DeepPINN(DeepEstimator):
                                 cfs *= to_apply
                         elif not op_change:
                             raise ValueError(f"Unknown character in coefficient: {char}")
+
+                    cfs *= sign
                         
             elif isinstance(coef,(list,tuple)):
                 cfs = self._calc_eqn(X_r,coef)

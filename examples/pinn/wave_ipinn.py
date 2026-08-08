@@ -49,6 +49,7 @@ conditions = [
 ]
 
 model_structure = [
+    ['N',np.array([0,0]),np.array([1,1])],
     ['D',64,'tanh'],
     ['D',64,'tanh'],
     ['D',32,'tanh'],
@@ -73,6 +74,7 @@ model = DeepPINN(variables=variables,
                     verbose=1,
                     random_state=42,
                     loss_weighting={'pde':1,'conditions':10,'data':100})
-model.fit()
 
+model.fit()
+print(model.equation_structure)
 print(model.constants_) # 1.98 Pretty good!

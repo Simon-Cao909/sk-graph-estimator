@@ -36,7 +36,8 @@ Each dictionary in this list can have keys and values:
         - If it is an operator, then that will change the current setting to match that of the operator
             - All future elements in the string will be applied in adherence to the current setting
             - The default is multiplication, and it will be reset to multiplication if you add a space ' ' in the string
-            - For instance, 'x^2y/3u' would be (x^(2y))/(3u) while 'x^2 y/3 u' would be u(x^2)(y/3)
+            - For instance, 'xz^2y/3u' would be ((xz)^(2y))/(3u) while 'x z^2 y/3 u' would be x\*(z^2)\*(y/3)\*u
+            - For reasons, if '-' was included at the beginning of the string, it will be applied after the calculation of the coefficient so something like -x^2 will be read as -(x^2)
     - If it was given of the form equation_structure, then the coefficient will be the given equation
     - If this key is not included, the default will be 1
     - Ex. {'coefficient':'2π',...}, {'coefficient':np.pi,...}, {'coefficient':'2xtu^2',...}, or:

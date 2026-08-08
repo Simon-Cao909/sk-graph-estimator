@@ -102,6 +102,10 @@ def parse_quick(structs):
             size = safe_get(struct,1,(2,2))
             data_format = safe_get(struct,2)
             new_structure.append({'type':layer_type,'size':size,'data_format':data_format})
+        elif layer_type == 'N' or layer_type.lower() in ['normalization','norm']:
+            mins = safe_get(struct,1)
+            maxs = safe_get(struct,2)
+            new_structure.append({'type':layer_type,'mins':mins,'maxs':maxs})
         elif layer_type.lower() == 'custom':
             layer = safe_get(struct,1)
             new_structure.append({'type':layer_type,'layer':layer})
@@ -145,18 +149,6 @@ def parse_quick(structs):
             branches = [parse_quick(branch) for branch in safe_get(struct,1)]
             merge_layer = safe_get(struct,2)
             new_structure.append({'type':layer_type,'branches':branches,'merge_layer':merge_layer})
-        elif layer_type == 'U' or layer_type.lower() in ['unet','u-net']:
-            filters = safe_get(struct,0)
-            kernel_size = safe_get(struct,1)
-            pool_size_1 = safe_get(struct,2,(2,2))
-            pool_size_2 = safe_get(struct,3,(4,4))
-            n_groups = safe_get(struct,4,8)
-            new_structure.append({'type':layer_type,
-                                  'filters':filters,
-                                  'kernel_size':kernel_size,
-                                  'pool_size_1':pool_size_1,
-                                  'pool_size_2':pool_size_2,
-                                  'n_groups':n_groups})
         else:
             new_structure.append({'type':layer_type})
     
