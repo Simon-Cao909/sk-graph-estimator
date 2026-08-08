@@ -43,21 +43,7 @@ model_structure = [
 #
 # ----------------------------------
 
-equation_structure = [
-
-    {
-        "var": "u",
-        "derivatives": ["x","x"],
-        "coef": 1
-    },
-
-    {
-        "var": "u",
-        "derivatives": ["y","y"],
-        "coef": 1
-    }
-
-]
+equation_structure = "u_xx + u_yy"
 
 
 # ----------------------------------

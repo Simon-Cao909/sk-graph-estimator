@@ -189,6 +189,11 @@ class DeepPINN(DeepEstimator):
             Of the form equation_structure.
 
             If None, self.equation_structure will be used.
+
+        Returns
+        -------
+        result : tf.Tensor
+            The result of the equation.
         '''
         if structure is None: structure = self.equation_structure
 
@@ -265,24 +270,49 @@ class DeepPINN(DeepEstimator):
                     cfs = int(coef)
                 else:
                     cfs = -1 if coef.startswith("-") else 1
+                    coef_operator = 'mult'
                     for char in coef:
+                        to_apply = None
+                        op_change = False
+
                         if char == 'u':
-                            cfs *= u
+                            to_apply = u
                         elif char.isnumeric():
-                            cfs *= int(char)
+                            to_apply = int(char)
                         elif char == 'π':
-                            cfs *= np.pi
+                            to_apply = np.pi
                         elif char == 'e':
-                            cfs *= np.e
+                            to_apply = np.e
+
+                        elif char == '^':
+                            coef_operator = 'pow'
+                            op_change = True
+                        elif char == '/':
+                            coef_operator = 'div'
+                            op_change = True
+                        elif char == ' ':
+                            coef_operator = 'mult'
+                            op_change = True
 
                         for v in variables:
                             if char == v:
-                                cfs *= var_to_val[v]
+                                to_apply = var_to_val[v]
                                 break
 
                         for name,value in self.constants_.items():
                             if char == name:
-                                cfs *= value
+                                to_apply = value
+
+                        if to_apply is not None:
+                            if coef_operator == '^':
+                                cfs **= to_apply
+                            elif coef_operator == 'div':
+                                cfs /= to_apply
+                            elif coef_operator == 'mult':
+                                cfs *= to_apply
+                        elif not op_change:
+                            raise ValueError(f"Unknown character in coefficient: {char}")
+                        
             elif isinstance(coef,(list,tuple)):
                 cfs = self._calc_eqn(X_r,coef)
             else:
@@ -634,7 +664,8 @@ class DeepPINN(DeepEstimator):
         self._check_is_fitted()
         return self.predict(self._get_data(loc,n_samples,self.mins,self.maxs,label="Running Predict_at_loc: "))
 
-    def plot(self,loc,
+    def plot(self,
+             loc,
              n_samples=50,
              draw=True,
              ax=None):

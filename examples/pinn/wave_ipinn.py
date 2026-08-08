@@ -29,7 +29,7 @@ u = np.sin(np.pi*x) * np.cos(np.pi*c_true*t)
 data = np.column_stack([x, t, u])
 data = tf.cast(data,tf.float32)
 
-equation_structure = "u_tt - (cc)u_xx"
+equation_structure = "u_tt - (c^2)u_xx"
 
 conditions = [
     {'loc':{'t':0},

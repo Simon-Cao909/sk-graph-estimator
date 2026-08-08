@@ -18,18 +18,28 @@ Each dictionary in this list can have keys and values:
     - Ex. {'derivatives':['x','x','t'],...}
 - KEY: 'coefficient' or 'coef' (opt | default=1)
     - The value should either be a number, string, or of the form equation_structure
+        - Note that this currently does not support the equation string parsing you see below.
     - This is the coefficient of the term that will be applied after the operator (see below)
     - If a number was given, the number will simply be the coefficient
     - If a string was given:
+        - The string can start with '-', where then the coefficient will just be negative
         - If the string is just numeric, that number will be the coefficient
-        - If the string contains non-numeric characters, then the only non-numeric characters that can be there are variables, constants, integers (0-9), 'u' (the function), 'π', or 'e', where the respective thing will be multiplied
-            - Note that '^' does not work here. If you would like to use powers, simply write the character multiple times (Ex. 'xx' for x^2)
-            - Note that '10' will be interpreted as 1 * 0. If you would like to use any multi-digit integer, you can include it in 'operator'
-        - The string can also start with '-', where then the coefficient will just be negative.
-        - Please note that '^' does not work here. If you would like to use powers, simply write the character multiple times (Ex. 'xx' for x^2)
+        - If the string contains non-numeric characters, then the only non-numeric characters that can be there are:
+            - variables
+            - constants
+            - integers (0-9)
+                - Note that '10' will be interpreted as 1 * 0. If you would like to use any multi-digit integer, you can include it in 'operator'
+            - 'u' (the function)
+            - 'π' or 'e'
+            - '^' or '/'
+        - where the respective thing will be multiplied if it is a value
+        - If it is an operator, then that will change the current setting to match that of the operator
+            - All future elements in the string will be applied in adherence to the current setting
+            - The default is multiplication, and it will be reset to multiplication if you add a space ' ' in the string
+            - For instance, 'x^2y/3u' would be (x^(2y))/(3u) while 'x^2 y/3 u' would be u(x^2)(y/3)
     - If it was given of the form equation_structure, then the coefficient will be the given equation
     - If this key is not included, the default will be 1
-    - Ex. {'coefficient':'2π',...}, {'coefficient':np.pi,...}, {'coefficient':'2xtu',...}, or:
+    - Ex. {'coefficient':'2π',...}, {'coefficient':np.pi,...}, {'coefficient':'2xtu^2',...}, or:
     ```python
     {
         ### Coefficient is sin(x) + cos(y)
@@ -60,7 +70,7 @@ equation_structure can also be a string, where you get to write out the equation
     - You can also start with first term with a '-' to make it negative
 - Do not use '=' anywhere. The equation is set to zero automatically
 - For each term, the coefficients must be between round brackets
-    - Currently, powers are not supported in this, so do not use the '^' symbol anywhere. If you would like to take coefficients to the power, then simply repeat them between the brackets
+    - Powers and division is now supported in this
 - The focus of each term must be after the coefficient. This focus can only be of one variable
 - In the focus, derivatives are indicated by the '_' symbol, where each character after that symbol will be a derivative
 - You can also use operators in the focus. The operator must use () around its operand
