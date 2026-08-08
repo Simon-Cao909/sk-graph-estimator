@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "skdeep"
-version = "1.7.5"
+version = "1.7.6"
 authors = [
     { name="Simon W. Cao", email="simon.cao909@gmail.com" },
 ]
@@ -23,6 +23,7 @@ dependencies = [
     "scipy",
     "tensorflow",
     "numpy",
+    'matplotlib'
 ]
 
 [tool.setuptools.packages.find]
